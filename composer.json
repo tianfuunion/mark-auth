@@ -6,7 +6,7 @@
 	"auth"
   ],
   "type": "library",
-  "license": "MulanPSL",
+  "license": "MulanPSL-2.0",
   "homepage": "https://auth.tianfu.ink",
   "authors": [
 	{
