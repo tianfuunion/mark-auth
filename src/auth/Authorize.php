@@ -10,5 +10,4 @@ class Authorize {
 
     public function request() {
     }
-
 }

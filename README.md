@@ -1,39 +1,50 @@
-# mark-auth
+# Mark Auth SDK For PHP
 
-#### 介绍
-{**以下是码云平台说明，您可以替换此简介**
-码云是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用码云实现代码托管、项目管理、协作开发。企业项目请看 [https://auth.tianfu.ink](https://auth.tianfu.ink)}
+[![Latest Stable Version](https://poser.pugx.org/tianfuunion/mark-auth/v/stable)](https://packagist.org/packages/tianfuunion/mark-auth)
+[![Build Status](https://travis-ci.org/tianfuunion/mark-auth.svg?branch=master)](https://travis-ci.org/tianfuunion/mark-auth)
+[![Coverage Status](https://coveralls.io/repos/github/tianfuunion/mark-auth/badge.svg?branch=master)](https://coveralls.io/github/aliyun/mark-auth?branch=master)
+  
+## 概述
+{标记权限管理（Mark Authorize，简称MarkAuth）是 天府联盟 对外提供专业的身份认证和授权服务。用户可以通过调用API，在任何应用、任何时间、任何地点上传和下载数据，也可以通过用户Web控制台对数据进行简单的管理。详情请看 [https://auth.tianfu.ink](https://auth.tianfu.ink)}
 
-#### 软件架构
+## 软件架构
 软件架构说明
 
+## 运行环境
+- PHP 7.2+
+- cURL extension
 
-#### 安装教程
+
+## 安装方法
+
+如果您通过composer管理您的项目依赖，可以在你的项目根目录运行：
+
+        $ composer require tianfuunion/mark-auth
+
+   或者在你的`composer.json`中声明对 Mark Auth SDK For PHP 的依赖：
+
+        "require": {
+            "tianfuunion/mark-auth": "~2.0"
+        }
+
+   然后通过`composer install`安装依赖。composer安装完成后，在您的PHP代码中引入依赖即可：
+
+        require_once __DIR__ . '/vendor/autoload.php';
+
+
+## 使用说明
 
 1.  xxxx
 2.  xxxx
 3.  xxxx
 
-#### 使用说明
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## License
 
-#### 参与贡献
+- MulanPSL-2.0
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+## 联系我们
 
-
-#### 码云特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  码云官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解码云上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是码云最有价值开源项目，是码云综合评定出的优秀开源项目
-5.  码云官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  码云封面人物是一档用来展示码云会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+- [天府联盟官方网站：www.tianfuunion.com](https://www.tianfuunion.com)
+- [天府授权中心官方网站：auth.tianfu.ink](https://auth.tianfu.ink)
+- [天府联盟反馈邮箱：report@tianfuunion.cn](mailto:report@tianfuunion.cn)
