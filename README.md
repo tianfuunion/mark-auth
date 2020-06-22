@@ -2,7 +2,7 @@
 
 [![Latest Stable Version](https://poser.pugx.org/tianfuunion/mark-auth/v/stable)](https://packagist.org/packages/tianfuunion/mark-auth)
 [![Build Status](https://travis-ci.org/tianfuunion/mark-auth.svg?branch=master)](https://travis-ci.org/tianfuunion/mark-auth)
-[![Coverage Status](https://coveralls.io/repos/github/tianfuunion/mark-auth/badge.svg?branch=master)](https://coveralls.io/github/aliyun/mark-auth?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/tianfuunion/mark-auth/badge.svg?branch=master)](https://coveralls.io/github/tianfuunion/mark-auth?branch=master)
   
 ## 概述
 {标记权限管理（Mark Authorize，简称MarkAuth）是 天府联盟 对外提供专业的身份认证和授权服务。用户可以通过调用API，在任何应用、任何时间、任何地点上传和下载数据，也可以通过用户Web控制台对数据进行简单的管理。详情请看 [https://auth.tianfu.ink](https://auth.tianfu.ink)}
