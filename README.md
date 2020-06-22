@@ -24,7 +24,7 @@
    或者在你的`composer.json`中声明对 Mark Auth SDK For PHP 的依赖：
 
         "require": {
-            "tianfuunion/mark-auth": "~2.0"
+            "tianfuunion/mark-auth": "~1.0.*"
         }
 
    然后通过`composer install`安装依赖。composer安装完成后，在您的PHP代码中引入依赖即可：
@@ -41,7 +41,7 @@
 
 ## License
 
-- MulanPSL-2.0
+- MIT
 
 ## 联系我们
 
