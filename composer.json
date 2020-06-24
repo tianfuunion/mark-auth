@@ -2,41 +2,47 @@
   "name": "tianfuunion/mark-auth",
   "description": "The Tianfu Union Mark Engine Authorize.",
   "keywords": [
-	"tianfuunion",
-	"mark-auth"
+    "tianfuunion",
+    "mark-auth"
   ],
   "type": "library",
   "license": "MIT",
   "homepage": "https://auth.tianfu.ink",
   "authors": [
-	{
-	  "name": "Mark Yount",
-	  "email": "mark@tianfuunion.cn"
-	}
+    {
+      "name": "Mark Yount",
+      "email": "mark@tianfuunion.cn"
+    }
   ],
   "require": {
-	"php": ">=7.1.0",
-	"tianfuunion/mark-engine": "1.0.*"
+    "php": ">=7.1.0",
+    "tianfuunion/mark-engine": "^1.0"
   },
   "require-dev": {
-	"phpunit/phpunit": "~7.0|~8.0",
-	"php-coveralls/php-coveralls": "^2.1",
-	"phpstan/phpstan": "^0.12"
+    "phpunit/phpunit": "~7.0|~8.0",
+    "php-coveralls/php-coveralls": "^2.2",
+    "phpstan/phpstan": "^0.12"
   },
   "autoload": {
-	"psr-4": {
-	  "Auth\\": "src/auth"
-	},
-	"psr-0": {
-	  "": ""
-	},
-	"files": [
-	  ""
-	]
+    "psr-4": {
+      "Auth\\": "src/auth"
+    },
+    "psr-0": {
+      "": ""
+    },
+    "files": [
+      ""
+    ]
   },
   "config": {
-	"sort-packages": true
+    "sort-packages": true
   },
   "minimum-stability": "stable",
-  "prefer-stable": true
+  "prefer-stable": true,
+  "repositories": {
+    "packagist": {
+      "type": "composer",
+      "url": "https://mirrors.aliyun.com/composer/"
+    }
+  }
 }
