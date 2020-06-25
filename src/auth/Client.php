@@ -5,8 +5,8 @@ declare (strict_types=1);
 namespace mark\auth;
 
 use think\facade\Request;
-use mark\http\Curl;
 use think\facade\Config;
+use mark\http\Curl;
 use mark\auth\entity\UserInfo;
 
 class Client {
