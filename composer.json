@@ -26,10 +26,7 @@
   "autoload": {
     "psr-4": {
       "mark\\": "src"
-    },
-    "files": [
-      ""
-    ]
+    }
   },
   "config": {
     "sort-packages": true
