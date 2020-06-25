@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\src;
+namespace mark\auth;
 
 use think\facade\Session;
 use think\facade\Config;

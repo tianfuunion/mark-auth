@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\src;
+namespace mark\auth;
 
 use Exception;
 use RuntimeException;

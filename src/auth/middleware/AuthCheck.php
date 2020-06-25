@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\src\middleware;
+namespace mark\auth\middleware;
 
 use Closure;
 use think\App;
@@ -15,10 +15,10 @@ use think\facade\Log;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\ModelNotFoundException;
 use think\db\exception\DbException;
-use mark\src\entity\AuthInfo;
-use mark\src\AuthUnion;
-use mark\src\Authorize;
-use mark\src\model\Channel;
+use mark\auth\entity\AuthInfo;
+use mark\auth\AuthUnion;
+use mark\auth\Authorize;
+use mark\auth\model\Channel;
 use mark\response\Responsive;
 use app\AuthMiddleware;
 

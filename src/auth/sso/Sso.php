@@ -1,8 +1,8 @@
 <?php
 
-namespace mark\src\sso;
+namespace mark\auth\sso;
 
-use mark\src\Authorize;
+use mark\auth\Authorize;
 use mark\http\Curl;
 
 abstract class Sso {

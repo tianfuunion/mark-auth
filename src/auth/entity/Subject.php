@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\src\entity;
+namespace mark\auth\entity;
 
 use Casbin\Enforcer;
 use Casbin\Exceptions\CasbinException;

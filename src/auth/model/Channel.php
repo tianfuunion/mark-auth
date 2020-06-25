@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\src\model;
+namespace mark\auth\model;
 
 use think\facade\Cache;
 use think\facade\Config;

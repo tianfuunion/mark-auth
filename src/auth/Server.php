@@ -1,6 +1,6 @@
 <?php
 
-namespace mark\src;
+namespace mark\auth;
 
 use mark\http\Curl;
 use mark\system\Os;

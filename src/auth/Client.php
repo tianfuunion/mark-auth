@@ -2,12 +2,12 @@
 
 declare (strict_types=1);
 
-namespace mark\src;
+namespace mark\auth;
 
 use think\facade\Request;
 use think\facade\Config;
 use mark\http\Curl;
-use mark\src\entity\UserInfo;
+use mark\auth\entity\UserInfo;
 use think\response\Redirect;
 
 class Client {
