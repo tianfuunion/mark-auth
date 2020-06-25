@@ -27,9 +27,6 @@
     "psr-4": {
       "mark\\auth\\": "src/auth"
     },
-    "psr-0": {
-      "": ""
-    },
     "files": [
       ""
     ]
