@@ -2,9 +2,13 @@
 
 declare (strict_types=1);
 
-namespace mark\auth\entity;
+namespace mark\src\entity;
 
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
 use think\facade\Db;
+use think\Model;
 
 final class UserInfo {
 
@@ -34,10 +38,10 @@ final class UserInfo {
     }
 
     /**
-     * @return array|\think\Model|null
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
+     * @return array|Model|null
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function find() {
         if (empty($this->where)) {
@@ -53,9 +57,9 @@ final class UserInfo {
 
     /**
      * @return array
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function select() {
         if (empty($this->where)) {

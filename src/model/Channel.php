@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\auth\model;
+namespace mark\src\model;
 
 use think\facade\Cache;
 use think\facade\Config;
@@ -17,7 +17,8 @@ use think\db\exception\DbException;
 use mark\wechat\notice\Notice;
 use mark\http\Curl;
 use mark\system\Os;
-use mark\auth\middleware\Authority;
+use mark\src\middleware\Authority;
+use think\Model;
 
 /**
  * Class Channel
@@ -37,7 +38,7 @@ class Channel {
      * @param string $url
      * @param int    $cache
      *
-     * @return array|mixed|\think\Model|null
+     * @return array|mixed|Model|null
      */
     public function getChannel($appid = 0, $url = '', $cache = 1) {
         $cacheKey = 'AuthUnion:channel';
@@ -135,7 +136,7 @@ class Channel {
      * @param string $identifier
      * @param int    $cache
      *
-     * @return array|mixed|\think\Model|null
+     * @return array|mixed|Model|null
      */
     public function getIdentifier($poolid = 0, $appid = 0, $identifier = '', $cache = 1) {
         $cacheKey = 'AuthUnion:identifier';

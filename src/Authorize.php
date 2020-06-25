@@ -2,11 +2,12 @@
 
 declare (strict_types=1);
 
-namespace mark\auth;
+namespace mark\src;
 
 use think\facade\Session;
 use think\facade\Config;
 use think\facade\Request;
+use think\response\Redirect;
 
 class Authorize {
 
@@ -27,7 +28,7 @@ class Authorize {
      * @param bool   $complete
      * @param string $scope
      *
-     * @return \think\response\Redirect
+     * @return Redirect
      */
     public static function request($complete = true, $scope = '') {
         $url = Config::get('auth.host') . '/auth.php/login/login?backurl=' . urlencode(Request::url($complete));

@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\auth\entity;
+namespace mark\src\entity;
 
 final class EmailInfo {
 

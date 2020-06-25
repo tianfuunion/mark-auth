@@ -2,10 +2,11 @@
 
 declare (strict_types=1);
 
-namespace mark\auth;
+namespace mark\src;
 
 use think\facade\Config;
 use think\facade\Request;
+use think\response\Redirect;
 
 class AuthUnion {
 
@@ -18,7 +19,7 @@ class AuthUnion {
      * @param string $access_type
      * @param int $state
      *
-     * @return \think\response\Redirect
+     * @return Redirect
      */
     public static function request(
         bool $complete = false, $response = 'code', $scope = 'snsapi_base', $access_type = 'offline', $state = 1234

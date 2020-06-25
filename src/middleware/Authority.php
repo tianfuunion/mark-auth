@@ -2,15 +2,16 @@
 
 declare (strict_types=1);
 
-namespace mark\auth\middleware;
+namespace mark\src\middleware;
 
-use mark\auth\entity\AuthInfo;
-use mark\auth\AuthUnion;
-use mark\auth\Authorize;
-use mark\auth\model\Channel;
+use mark\src\entity\AuthInfo;
+use mark\src\AuthUnion;
+use mark\src\Authorize;
+use mark\src\model\Channel;
 use mark\request\Request;
 
 use Psr\SimpleCache\CacheInterface;
+use think\response\Redirect;
 
 /**
  * Class AuthCheck
@@ -69,7 +70,7 @@ abstract class Authority {
     /**
      * 处理器
      *
-     * @return \think\response\Redirect
+     * @return Redirect
      */
     public function handler() {
         if (!empty($this->before_handle)) {

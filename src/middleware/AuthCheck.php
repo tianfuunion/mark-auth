@@ -2,7 +2,7 @@
 
 declare (strict_types=1);
 
-namespace mark\auth\middleware;
+namespace mark\src\middleware;
 
 use Closure;
 use think\App;
@@ -15,10 +15,10 @@ use think\facade\Log;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\ModelNotFoundException;
 use think\db\exception\DbException;
-use mark\auth\entity\AuthInfo;
-use mark\auth\AuthUnion;
-use mark\auth\Authorize;
-use mark\auth\model\Channel;
+use mark\src\entity\AuthInfo;
+use mark\src\AuthUnion;
+use mark\src\Authorize;
+use mark\src\model\Channel;
 use mark\response\Responsive;
 use app\AuthMiddleware;
 
@@ -320,7 +320,7 @@ class AuthCheck {
     /**
      * 验证
      *
-     * @param \think\Request $request
+     * @param Request $request
      */
     public function validate(Request $request) {
 

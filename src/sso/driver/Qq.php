@@ -1,8 +1,8 @@
 <?php
 
-namespace mark\auth\sso\driver;
+namespace mark\src\sso\driver;
 
-use mark\auth\sso\Sso;
+use mark\src\sso\Sso;
 
 class Qq extends Sso {
 

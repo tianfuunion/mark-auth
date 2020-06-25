@@ -2,10 +2,10 @@
 
 declare (strict_types=1);
 
-namespace mark\auth;
+namespace mark\src;
 
 use mark\http\Curl;
-use mark\auth\entity\Subject;
+use mark\src\entity\Subject;
 
 final class SecurityManager {
 
@@ -22,7 +22,7 @@ final class SecurityManager {
      *
      * 访问系统的用户，主体可以是用户、程序等，进行认证的都称为主体；
      *
-     * @return \mark\auth\entity\Subject
+     * @return Subject
      */
     public function getSubject(): Subject {
         return $this->subject;

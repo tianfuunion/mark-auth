@@ -2,8 +2,9 @@
 
 declare (strict_types=1);
 
-namespace mark\auth;
+namespace mark\src;
 
+use Exception;
 use RuntimeException;
 
 class Authing {
@@ -33,7 +34,7 @@ PUBLICKKEY;
      *
      * @param $options
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function __construct($options) {
         $this->options = $this->createOptions($options);
@@ -44,7 +45,7 @@ PUBLICKKEY;
     /**
      * Check the right of the options
      *
-     * @throws \Exception
+     * @throws Exception
      */
     private function getAccessToken() {
         $query
@@ -74,7 +75,7 @@ QUERY;
      * @param $options
      *
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     private function createOptions($options) {
         if (is_array($options)) {
@@ -89,7 +90,7 @@ QUERY;
      * @param $params
      *
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     private function checkParams($params) {
         if (is_array($params)) {
@@ -114,8 +115,8 @@ QUERY;
      * @param array $params
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function login($params) {
         //check params is contain Specified key
@@ -164,7 +165,7 @@ QUERY;
      *  readOAuthList
      *
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function ReadOAuthList() {
 
@@ -199,8 +200,8 @@ QUERY;
      * @param $params
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function user($params) {
         $params = $this->checkParams($params, 'id');
@@ -255,8 +256,8 @@ QUERY;
      * @param $params
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function users($params) {
         $params = $this->checkParams($params, 'page', 'count');
@@ -339,8 +340,8 @@ QUERY;
      * checkLoginStatus
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function checkLoginStatus() {
         if (empty($this->_userToken)) {
@@ -369,8 +370,8 @@ QUERY;
      * @param $params
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function removeUsers($params) {
         $params = $this->checkParams($params, 'ids');
@@ -402,8 +403,8 @@ QUERY;
      * @param array $params email
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function sendVerifyEmail($params) {
         $params = $this->checkParams($params, 'email');
@@ -440,8 +441,8 @@ QUERY;
      * @param array $params email
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function sendResetPasswordEmail($params) {
         $params = $this->checkParams($params, 'email');
@@ -476,8 +477,8 @@ QUERY;
      * @param array $params email
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function verifyResetPasswordVerifyCode($params) {
         $params = $this->checkParams($params, 'email', 'verifyCode');
@@ -515,8 +516,8 @@ QUERY;
      * @param array $params email
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function changePassword($params) {
         $params = $this->checkParams($params, 'email', 'verifyCode', 'password');
@@ -575,7 +576,7 @@ QUERY;
      * @param int          $time   timeout time
      *
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     private function getHttp($url, $data, $header = [], $time = 30000) {
 
@@ -654,8 +655,8 @@ QUERY;
      *                     ['photo']            String
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function register($params) {
         $params = $this->checkParams($params, 'email', 'password');
@@ -726,8 +727,8 @@ QUERY;
      *                     ['photo']            String
      *
      * @return mixed
-     * @throws \Exception
-     * @throws \Exception
+     * @throws Exception
+     * @throws Exception
      */
     public function updateUser($params) {
         $params = $this->checkParams($params, 'id');
