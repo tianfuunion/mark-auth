@@ -20,14 +20,14 @@
     use think\db\exception\ModelNotFoundException;
     use think\db\exception\DbException;
 
-    use mark\src\entity\AuthInfo;
-    use mark\src\AuthUnion;
-    use mark\src\Authorize;
+    use mark\auth\entity\AuthInfo;
+    use mark\auth\AuthUnion;
+    use mark\auth\Authorize;
 
     use mark\response\Responsive;
     use mark\system\Os;
     use mark\wechat\Jssdk;
-    use mark\src\middleware\Authority;
+    use mark\auth\middleware\Authority;
 
     /**
      * Class AuthCheck

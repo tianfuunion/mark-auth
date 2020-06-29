@@ -4,9 +4,9 @@ namespace mark\auth;
 
 use mark\http\Curl;
 use mark\system\Os;
-use mark\src\sso\driver\AliPay;
-use mark\src\sso\driver\WeChat;
-use mark\src\sso\driver\DingTalk;
+use mark\auth\sso\driver\AliPay;
+use mark\auth\sso\driver\WeChat;
+use mark\auth\sso\driver\DingTalk;
 use think\facade\Config;
 
 class Server {

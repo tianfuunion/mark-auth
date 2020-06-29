@@ -17,7 +17,7 @@ use think\db\exception\DbException;
 use mark\wechat\notice\Notice;
 use mark\http\Curl;
 use mark\system\Os;
-use mark\src\middleware\Authority;
+use mark\auth\middleware\Authority;
 use think\Model;
 
 /**

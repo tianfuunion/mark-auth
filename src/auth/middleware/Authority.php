@@ -2,12 +2,12 @@
 
 declare (strict_types=1);
 
-namespace mark\src\middleware;
+namespace mark\auth\middleware;
 
-use mark\src\entity\AuthInfo;
-use mark\src\AuthUnion;
-use mark\src\Authorize;
-use mark\src\model\Channel;
+use mark\auth\entity\AuthInfo;
+use mark\auth\AuthUnion;
+use mark\auth\Authorize;
+use mark\auth\model\Channel;
 use mark\request\Request;
 
 use Psr\SimpleCache\CacheInterface;

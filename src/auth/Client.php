@@ -6,9 +6,9 @@ namespace mark\auth;
 
 use think\facade\Request;
 use think\facade\Config;
+use think\response\Redirect;
 use mark\http\Curl;
 use mark\auth\entity\UserInfo;
-use think\response\Redirect;
 
 class Client {
 

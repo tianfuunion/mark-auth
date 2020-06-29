@@ -1,8 +1,8 @@
 <?php
 
-namespace mark\src\sso\driver;
+namespace mark\auth\sso\driver;
 
-use mark\src\sso\Sso;
+use mark\auth\sso\Sso;
 use think\facade\Log;
 use think\facade\Request;
 use think\facade\Config;
