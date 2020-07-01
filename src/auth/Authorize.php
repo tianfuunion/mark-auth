@@ -7,7 +7,6 @@ namespace mark\auth;
 use think\facade\Session;
 use think\facade\Config;
 use think\facade\Request;
-use think\response\Redirect;
 
 class Authorize {
 
@@ -28,7 +27,7 @@ class Authorize {
      * @param bool   $complete
      * @param string $scope
      *
-     * @return Redirect
+     * @return \think\response\Redirect
      */
     public static function request($complete = true, $scope = '') {
         $url = Config::get('auth.host') . '/auth.php/login/login?backurl=' . urlencode(Request::url($complete));

@@ -3,18 +3,18 @@
     namespace mark\auth\sso\driver;
 
     use mark\auth\sso\Sso;
+    use think\facade\Log;
     use think\facade\Request;
     use think\facade\Config;
-    use think\response\Redirect;
 
-    class WeChat extends Sso
+    class UnionAuth extends Sso
     {
 
         /**
          * 用户同意授权，获取code
          * Authorize constructor.
          *
-         * public $index_url = "https://account.nyhbqc.com/account.php/authorize/auth";  //微信回调地址，要跟公众平台的配置域名相同
+         * public $index_url = "https://auth.tianfu.ink/auth.php/oauth2/authorize";  //微信回调地址，要跟公众平台的配置域名相同
          * 参数        是否必须    说明
          *
          * appid                公众号的唯一标识
@@ -23,41 +23,28 @@
          * scope                        应用授权作用域，snsapi_base （不弹出授权页面，直接跳转，只能获取用户openid），
          * snsapi_userinfo （弹出授权页面，可通过openid拿到昵称、性别、所在地。并且， 即使在未关注的情况下，只要用户授权，也能获取其信息 ）
          * state                        重定向后会带上state参数，开发者可以填写a-zA-Z0-9的参数值，最多128字节
-         * #wechat_redirect            无论直接打开还是做页面302重定向时候，必须带此参数
+         * #auth_redirect            无论直接打开还是做页面302重定向时候，必须带此参数
          *
          * @return bool|mixed
          */
         public function request()
         {
-            // Log::info("如果SESSION中没有openid，说明用户刚刚登陆，就执行getCode、getOpenId、getUserInfo获取他的信息::" . json_encode($_GET));
+            // 用户同意授权，获取code
             if (!Request::has("code", "get", true)) {
-                $result = $this->getCode(Request::url(true));
-                if ($result instanceof Redirect) {
-                    return false;
-                }
-
-                return $result;
+                return $this->getCode(Request::url(true));
             }
 
             //获取网页授权access_token和用户openid
             $token = $this->getAccessToken(Request::get('code'));
             if (!$token) {
-                // Log::error('WeChat::Request(getAccessToken Token Null)');
-
                 return $this->getCode(Request::url(true));
             }
 
-            // Log::info('WeChat::Request(Token True)' . json_encode($token));
             // TODO：这里已经获取到OpenId,可检查是否注册过，未注册则再申请UserInfo
             $userInfo = $this->getUserInfo($token['access_token'], $token['openid']);//获取微信用户信息
             if (!empty($userInfo) && !empty($userInfo['openid'])) {
-                // Log::info('WeChat::Request(UserInfo True)' . json_encode($userInfo) . ' getType::' . gettype($userInfo));
-
                 return $userInfo;
             }
-
-            // Log::error('WeChat::Request(getUserInfo is null) ' . json_encode($userInfo));
-
             return false;
         }
 
@@ -76,17 +63,18 @@
          */
         public function getCode($callback)
         {
-            $url = 'https://open.weixin.qq.com/connect/oauth2/authorize?'
+            $url = 'https://auth.tianfu.ink/auth.php/oauth2/authorize?'
                 . 'appid=' . Config::get('auth.stores.wechat.appid')
                 . '&redirect_uri=' . urlencode($callback)
                 . '&response_type=' . Config::get('auth.stores.wechat.response_type', 'code')
                 // . "&scope=" . Config::get("auth.stores.wechat.scope", "snsapi_base")
                 . '&scope=' . ($this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base')
                 . '&state=' . Config::get('auth.stores.wechat.state', md5(uniqid((string)time(), true)))
-                . '#wechat_redirect';
+                . '#auth_redirect';
 
             header('Location: ' . $url);
 
+            return false;
             return redirect($url);
         }
 
@@ -108,22 +96,18 @@
          */
         public function getAccessToken($code)
         {
-            $url = 'https://api.weixin.qq.com/sns/oauth2/access_token' .
+            $url = 'https://auth.tianfu.ink/auth.php/oauth2/access_token' .
                 '?appid=' . Config::get('auth.stores.wechat.appid') .
                 '&secret=' . Config::get('auth.stores.wechat.secret') .
                 '&code=' . $code . '&grant_type=authorization_code';
 
-            $json = $this->curl->get($url)->execute();
-            // Log::info("WeChat::getAccessToken($json)");
-            $array = json_decode($json, true);
+            $token = $this->curl->get($url)->toArray();
 
-            if (!empty($array) && isset($array['errcode'])) {
-                // Log::info('WeChat::getAccessToken::(False 错误返回)' . json_encode($array));
-
+            if (!empty($token) && isset($token['errcode'])) {
                 return false;
             }
 
-            return $array;
+            return $token;
         }
 
         /**
@@ -159,27 +143,25 @@
         public function getUserInfo($token, $openid)
         {
             // $url = "https://api.weixin.qq.com/sns/userinfo?access_token=" . $token . "&openid=" . $openid . "&lang=zh_CN";
-            $url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' . $token . '&openid=' . $openid . '&lang=' . Config::get(
-                    'lang.default_lang'
-                );
-            $json = $this->curl->get($url)->execute();
-            // Log::info("WeChat::getUserInfo($url)");
-            // Log::info("WeChat::getUserInfo($json)");
-            $array = json_decode($json, true);
+            $url = 'https://auth.tianfu.ink/auth.php/oauth2/userinfo?access_token=' . $token
+                . '&openid=' . $openid
+                . '&lang=' . Config::get('lang.default_lang');
 
-            if (isset($array['errcode'])) {
-                // Log::info('WeChat::getUserInfo(False 错误返回)' . json_encode($array));
+            $token = $this->curl->get($url)->toArray();
+
+            if (isset($token['errcode'])) {
+                Log::error('UnionAuth::getUserInfo(False 错误返回)' . json_encode($token));
 
                 return false;
             }
 
-            if (empty($array) || empty($array['openid']) || !isset($array['openid'])) {
-                // Log::error('WeChat::getUserInfo(False OpenID 无效)' . json_encode($array));
+            if (empty($token) || empty($token['openid']) || !isset($token['openid'])) {
+                Log::error('UnionAuth::getUserInfo(False OpenID 无效)' . json_encode($token));
 
                 return false;
             }
 
-            return $array;
+            return $token;
         }
 
     }

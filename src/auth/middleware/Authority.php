@@ -11,7 +11,6 @@ use mark\auth\model\Channel;
 use mark\request\Request;
 
 use Psr\SimpleCache\CacheInterface;
-use think\response\Redirect;
 
 /**
  * Class AuthCheck
@@ -70,7 +69,7 @@ abstract class Authority {
     /**
      * 处理器
      *
-     * @return Redirect
+     * @return \think\response\Redirect
      */
     public function handler() {
         if (!empty($this->before_handle)) {
@@ -191,7 +190,7 @@ abstract class Authority {
 
             if (Request::isGet()) {
                 // return $this->redirect();
-                return AuthUnion::request(true);
+                 return AuthUnion::request(true);
             }
 
             $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required');

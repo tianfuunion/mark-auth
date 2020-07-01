@@ -6,7 +6,6 @@ namespace mark\auth;
 
 use think\facade\Request;
 use think\facade\Config;
-use think\response\Redirect;
 use mark\http\Curl;
 use mark\auth\entity\UserInfo;
 
@@ -29,7 +28,7 @@ class Client {
      *
      * 当前节点为应用节点，并且未跨域
      *
-     * @return Redirect
+     * @return \think\response\Redirect
      */
     public function request() {
         return redirect(Config::get('auth.host') . '/auth.php/login/login?backurl=' . urlencode(Request::url(true)));
@@ -61,7 +60,7 @@ class Client {
     private static $email;
 
     /**
-     * @return UserInfo
+     * @return \mark\auth\entity\UserInfo
      */
     public static function user() {
         if (self::$user == null) {
@@ -72,7 +71,7 @@ class Client {
     }
 
     /**
-     * @return UserInfo
+     * @return \mark\auth\entity\UserInfo
      */
     public static function email() {
         if (self::$user == null) {

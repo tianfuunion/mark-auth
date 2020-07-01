@@ -18,7 +18,6 @@ use mark\wechat\notice\Notice;
 use mark\http\Curl;
 use mark\system\Os;
 use mark\auth\middleware\Authority;
-use think\Model;
 
 /**
  * Class Channel
@@ -38,7 +37,7 @@ class Channel {
      * @param string $url
      * @param int    $cache
      *
-     * @return array|mixed|Model|null
+     * @return array|mixed
      */
     public function getChannel($appid = 0, $url = '', $cache = 1) {
         $cacheKey = 'AuthUnion:channel';
@@ -136,7 +135,7 @@ class Channel {
      * @param string $identifier
      * @param int    $cache
      *
-     * @return array|mixed|Model|null
+     * @return array|mixed
      */
     public function getIdentifier($poolid = 0, $appid = 0, $identifier = '', $cache = 1) {
         $cacheKey = 'AuthUnion:identifier';

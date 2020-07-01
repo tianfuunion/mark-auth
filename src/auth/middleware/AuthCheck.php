@@ -172,7 +172,7 @@ class AuthCheck {
             }
 
             if ($request->isGet()) {
-                return AuthUnion::request(true);
+                 return AuthUnion::request(true);
             }
 
             Log::error('AuthUnion::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required');
@@ -320,7 +320,7 @@ class AuthCheck {
     /**
      * 验证
      *
-     * @param Request $request
+     * @param \think\Request $request
      */
     public function validate(Request $request) {
 
