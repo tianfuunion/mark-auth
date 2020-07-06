@@ -1,13 +1,17 @@
 <?php
 
-namespace mark\auth\sso\driver;
+    declare (strict_types=1);
 
-use mark\auth\sso\Sso;
+    namespace mark\auth\sso\driver;
 
-class Qq extends Sso {
+    use mark\auth\sso\Sso;
 
-    public function request() {
-        return false;
+    class Qq extends Sso
+    {
+
+        public function request()
+        {
+            return false;
+        }
+
     }
-
-}

@@ -1,5 +1,7 @@
 <?php
 
+    declare (strict_types=1);
+
     namespace mark\auth\sso\driver;
 
     use mark\auth\sso\Sso;
@@ -10,7 +12,6 @@
 
     class UnionAuth extends Sso
     {
-
         /**
          * 用户同意授权，获取code
          * Authorize constructor.
@@ -25,7 +26,7 @@
                     Config::get('auth.stores.wechat.appid'),
                     Request::url(true),
                     Config::get('auth.stores.wechat.response_type', 'code'),
-                    ($this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base'),
+                    $this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
                     Config::get('auth.stores.wechat.state', md5(uniqid((string)time(), true)))
                 );
                 if ($result instanceof Redirect) {
@@ -38,7 +39,13 @@
             //2、第二步：通过code换取网页授权access_token
             $token = $this->getAccessToken(Config::get('auth.stores.wechat.appid'), Config::get('auth.stores.wechat.secret'), Request::get('code'));
             if (!$token || is_empty($token['access_token']) || is_empty($token['openid'])) {
-                return $this->getCode(Request::url(true));
+                return $this->getCode(
+                    Config::get('auth.stores.wechat.appid'),
+                    Request::url(true),
+                    Config::get('auth.stores.wechat.response_type', 'code'),
+                    $this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
+                    Config::get('auth.stores.wechat.state', md5(uniqid((string)time(), true)))
+                );
             }
 
             // TODO：这里已经获取到OpenId,可检查是否注册过，未注册则再申请UserInfo
