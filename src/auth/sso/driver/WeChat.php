@@ -134,16 +134,9 @@
             }
             return false;
         }
-        /**
-         *
-         **
-         * 通过code获取用户openid以及用户的微信号信息
-         * 获取到用户的openid之后可以判断用户是否有数据，可以直接跳过获取access_token,也可以继续获取access_token
-         * access_token每日获取次数是有限制的，access_token有时间限制，可以存储到数据库7200s. 7200s后access_token失效
-         **/
 
         /**
-         * 4 第四步：拉取用户信息(需scope为 snsapi_userinfo)
+         * 4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
          *
          * @param string $access_token 网页授权接口调用凭证,注意：此access_token与基础支持的access_token不同
          * @param string $openid 用户的唯一标识
