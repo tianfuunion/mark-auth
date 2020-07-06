@@ -3,6 +3,7 @@
     namespace mark\auth\sso\driver;
 
     use mark\auth\sso\Sso;
+    use mark\http\Curl;
     use think\facade\Request;
     use think\facade\Config;
     use think\response\Redirect;
@@ -42,8 +43,6 @@
             //获取网页授权access_token和用户openid
             $token = $this->getAccessToken(Request::get('code'));
             if (!$token) {
-                // Log::error('WeChat::Request(getAccessToken Token Null)');
-
                 return $this->getCode(Request::url(true));
             }
 
@@ -51,12 +50,8 @@
             // TODO：这里已经获取到OpenId,可检查是否注册过，未注册则再申请UserInfo
             $userInfo = $this->getUserInfo($token['access_token'], $token['openid']);//获取微信用户信息
             if (!empty($userInfo) && !empty($userInfo['openid'])) {
-                // Log::info('WeChat::Request(UserInfo True)' . json_encode($userInfo) . ' getType::' . gettype($userInfo));
-
                 return $userInfo;
             }
-
-            // Log::error('WeChat::Request(getUserInfo is null) ' . json_encode($userInfo));
 
             return false;
         }
@@ -113,17 +108,14 @@
                 '&secret=' . Config::get('auth.stores.wechat.secret') .
                 '&code=' . $code . '&grant_type=authorization_code';
 
-            $json = $this->curl->get($url)->execute();
-            // Log::info("WeChat::getAccessToken($json)");
-            $array = json_decode($json, true);
+            $token = Curl::getInstance()->get($url)->toArray();
 
-            if (!empty($array) && isset($array['errcode'])) {
-                // Log::info('WeChat::getAccessToken::(False 错误返回)' . json_encode($array));
+            if (!empty($token) && isset($token['errcode'])) {
 
                 return false;
             }
 
-            return $array;
+            return $token;
         }
 
         /**
@@ -158,28 +150,18 @@
          */
         public function getUserInfo($token, $openid)
         {
-            // $url = "https://api.weixin.qq.com/sns/userinfo?access_token=" . $token . "&openid=" . $openid . "&lang=zh_CN";
-            $url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' . $token . '&openid=' . $openid . '&lang=' . Config::get(
-                    'lang.default_lang'
-                );
-            $json = $this->curl->get($url)->execute();
-            // Log::info("WeChat::getUserInfo($url)");
-            // Log::info("WeChat::getUserInfo($json)");
-            $array = json_decode($json, true);
+            $url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' . $token . '&openid=' . $openid . '&lang=' . Config::get('lang.default_lang');
+            $userinfo = Curl::getInstance()->get($url)->toArray();
 
-            if (isset($array['errcode'])) {
-                // Log::info('WeChat::getUserInfo(False 错误返回)' . json_encode($array));
-
+            if (isset($userinfo['errcode'])) {
                 return false;
             }
 
-            if (empty($array) || empty($array['openid']) || !isset($array['openid'])) {
-                // Log::error('WeChat::getUserInfo(False OpenID 无效)' . json_encode($array));
-
+            if (empty($userinfo) || empty($userinfo['openid']) || !isset($userinfo['openid'])) {
                 return false;
             }
 
-            return $array;
+            return $userinfo;
         }
 
     }
