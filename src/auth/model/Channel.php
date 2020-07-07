@@ -210,7 +210,8 @@ class Channel {
 
         if ($code == 200) {
             if (!empty($json)) {
-                $result = json_decode($json, true);
+                // $result = json_decode($json, true);
+                $result = $curl->toArray();
             } else {
                 $result = array();
                 self::runevent();
@@ -242,7 +243,7 @@ class Channel {
 
     private function taobao() {
         try {
-            $ip = Request::ip();
+            $ip = Os::getIpvs();
             $curl = Curl::getInstance()
                         ->get('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip, 'json');
             $result = $curl->toArray();
@@ -293,7 +294,7 @@ class Channel {
 
     private function juhe() {
         try {
-            $ip = Request::ip();
+            $ip = Os::getIpvs();
             $curl = Curl::getInstance()
                         ->get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json');
             $result = $curl->toArray();
@@ -305,7 +306,7 @@ class Channel {
                 if ($result['resultcode'] == 200) {
                     $remark .= implode('_', $result['result']) . " " . $ip;
                 } else {
-                    $this->authority->logcat('error', 'IP Info Warning ' . json_encode($result));
+                    $this->authority->logcat('error', 'IP Info Warning ' . json_encode($result,JSON_UNESCAPED_UNICODE));
                 }
             } else {
                 $this->authority->logcat('error', 'IP Info Error ');
