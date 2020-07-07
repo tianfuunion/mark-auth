@@ -160,8 +160,7 @@
                 $this->session->set('expiretime', time() + (int)round(abs($this->expire)));
             } else {
                 if (Request::isAjax() || Request::isPjax()) {
-                    $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Ajax Unauthorized');
-                    $this->logcat('error', 'Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+                    $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Ajax Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                     return $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
                 }
@@ -170,8 +169,7 @@
                     return Authorize::request(true);
                 }
 
-                $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Unauthorized');
-                $this->logcat('error', 'Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+                $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                 return $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
             }
@@ -184,8 +182,7 @@
             // 不为默认则必获取授权
             if (!Authorize::isUnion()) {
                 if (Request::isAjax()) {
-                    $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required');
-                    $this->logcat('error', 'Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+                    $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                     return $this->response('', 407);
                 }
@@ -195,8 +192,7 @@
                     return AuthUnion::request(true);
                 }
 
-                $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required');
-                $this->logcat('error', 'Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+                $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                 return $this->response('', 407);
             }
@@ -279,7 +275,6 @@
 
                 return $this->response('', 500, 'DbException:' . $e->getMessage(), '服务异常');
             }
-
 
             $response = $this->response('', 200);
 
