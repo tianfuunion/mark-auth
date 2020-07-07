@@ -10,6 +10,11 @@
     use think\facade\Request;
     use think\response\Redirect;
 
+    /**
+     * Class WeChat
+     * 如果用户在微信客户端中访问第三方网页，公众号可以通过微信网页授权机制，来获取用户基本信息，进而实现业务逻辑。
+     * @package mark\auth\sso\driver
+     */
     class WeChat extends Sso
     {
         /**
@@ -38,7 +43,7 @@
 
             //2、第二步：通过code换取网页授权access_token
             $token = $this->getAccessToken(Config::get('auth.stores.wechat.appid'), Config::get('auth.stores.wechat.secret'), Request::get('code'));
-            if ($token == false || is_empty($token['access_token']) || is_empty($token['openid'])) {
+            if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
                 return false;
             }
 
@@ -48,7 +53,7 @@
 
             //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
             $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], Config::get('lang.default_lang'));
-            if (!is_empty($userInfo) && !is_empty($userInfo['openid'])) {
+            if (!empty($userInfo) && !empty($userInfo['openid'])) {
                 return $userInfo;
             }
 
@@ -66,6 +71,7 @@
          * @param string $scope 应用授权作用域，snsapi_base （不弹出授权页面，直接跳转，只能获取用户openid），snsapi_userinfo （弹出授权页面，可通过openid拿到昵称、性别、所在地。并且， 即使在未关注的情况下，只要用户授权，也能获取其信息 ）
          * @param string $state 重定向后会带上state参数，开发者可以填写a-zA-Z0-9的参数值，最多128字节
          * @return mixed
+         * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#0
          */
         public function getCode(string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'snsapi_base', string $state = '')
         {
@@ -97,6 +103,7 @@
          * "openid":"OPENID",
          * "scope":"SCOPE"
          * }
+         * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#2
          */
         public function getAccessToken(string $appid, string $secret, string $code)
         {
@@ -104,11 +111,11 @@
 
             $token = Curl::getInstance()->get($url)->toArray();
 
-            if (!is_empty($token) && is_empty($token['openid']) && is_empty($token['access_token'])) {
+            if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
                 return $token;
             }
 
-            if (!is_empty($token['errcode'])) {
+            if (!empty($token['errcode'])) {
                 return false;
             }
 
@@ -129,6 +136,7 @@
          * @param string $appid 公众号的唯一标识
          * @param string $refresh_token 填写通过access_token获取到的refresh_token参数
          * @return array|bool|false
+         * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#2
          */
         public function refreshToken(string $appid, string $refresh_token)
         {
@@ -136,7 +144,7 @@
 
             $token = Curl::getInstance()->get($url)->toArray();
 
-            if (!is_empty($token) && is_empty($token['access_token']) && is_empty($token['refresh_token'])) {
+            if (!empty($token) && !empty($token['access_token']) && !empty($token['refresh_token'])) {
                 return $token;
             }
             return false;
@@ -149,21 +157,18 @@
          * @param string $openid 用户的唯一标识
          * @param string $lang 返回国家地区语言版本，zh_CN 简体，zh_TW 繁体，en 英语
          * @return array|bool|false|string
+         * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#3
          */
         public function getUserInfo(string $access_token, string $openid, string $lang = 'zh_CN')
         {
             $url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
             $userinfo = Curl::getInstance()->get($url)->toArray();
 
-            if (!is_empty($userinfo) && !is_empty($userinfo['openid']) && !is_empty($userinfo['nickname']) && !is_empty($userinfo['sex'])) {
+            if (!empty($userinfo) && !empty($userinfo['openid']) && !empty($userinfo['nickname']) && !empty($userinfo['sex'])) {
                 return $userinfo;
             }
 
-            if (!is_empty($userinfo['errcode'])) {
-                return false;
-            }
-
-            if (empty($userinfo) || empty($userinfo['openid']) || !isset($userinfo['openid'])) {
+            if (!empty($userinfo['errcode'])) {
                 return false;
             }
 
@@ -183,7 +188,7 @@
         {
             $url = 'https://api.weixin.qq.com/sns/auth?access_token=' . $access_token . '&openid=' . $openid;
             $result = Curl::getInstance()->get($url)->toArray();
-            if ($result['errcode'] == 0) {
+            if (!empty($result['errcode']) && $result['errcode'] == 0) {
                 return true;
             }
             return false;
