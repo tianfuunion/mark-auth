@@ -30,25 +30,22 @@
                     Config::get('auth.stores.wechat.state', md5(uniqid((string)time(), true)))
                 );
                 if ($result instanceof Redirect) {
-                    return false;
+                    return $result;
                 }
 
-                return $result;
+                return false;
             }
 
             //2、第二步：通过code换取网页授权access_token
             $token = $this->getAccessToken(Config::get('auth.stores.wechat.appid'), Config::get('auth.stores.wechat.secret'), Request::get('code'));
-            if (!$token || is_empty($token['access_token']) || is_empty($token['openid'])) {
-                return $this->getCode(
-                    Config::get('auth.stores.wechat.appid'),
-                    Request::url(true),
-                    Config::get('auth.stores.wechat.response_type', 'code'),
-                    $this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
-                    Config::get('auth.stores.wechat.state', md5(uniqid((string)time(), true)))
-                );
+            if ($token == false || is_empty($token['access_token']) || is_empty($token['openid'])) {
+                return false;
             }
 
-            // TODO：这里已经获取到OpenId,可检查是否注册过，未注册则再申请UserInfo
+            if ($this->auth->scope === 'snsapi_base') {
+                return $token;
+            }
+
             //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
             $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], Config::get('lang.default_lang'));
             if (!empty($userInfo) && !empty($userInfo['openid'])) {
@@ -107,8 +104,11 @@
 
             $token = Curl::getInstance()->get($url)->toArray();
 
-            if (!empty($token) && isset($token['errcode'])) {
+            if (!is_empty($token) && is_empty($token['openid']) && is_empty($token['access_token'])) {
+                return $token;
+            }
 
+            if (!is_empty($token['errcode'])) {
                 return false;
             }
 
@@ -155,7 +155,11 @@
             $url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
             $userinfo = Curl::getInstance()->get($url)->toArray();
 
-            if (isset($userinfo['errcode'])) {
+            if (!is_empty($userinfo) && !is_empty($userinfo['openid']) && !is_empty($userinfo['nickname']) && !is_empty($userinfo['sex'])) {
+                return $userinfo;
+            }
+
+            if (!is_empty($userinfo['errcode'])) {
                 return false;
             }
 

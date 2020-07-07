@@ -10,6 +10,7 @@
     use mark\auth\model\Channel;
     use mark\request\Request;
 
+    use mark\system\Os;
     use Psr\SimpleCache\CacheInterface;
 
     /**
@@ -30,7 +31,7 @@
 
         public function __construct()
         {
-            $this->logcat('info', 'Authority::construct(' . time() . ')');
+            $this->logcat('info', 'Authority::construct(' . Os::getAgent() . ')');
             $this->channel = new Channel($this);
         }
 
@@ -78,7 +79,7 @@
          *
          * @return \think\response\Redirect
          */
-        public function handler()
+        protected function handler()
         {
             if (!empty($this->before_handle)) {
                 call_user_func_array($this->before_handle, array());
