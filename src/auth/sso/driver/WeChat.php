@@ -48,7 +48,7 @@
 
             //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
             $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], Config::get('lang.default_lang'));
-            if (!empty($userInfo) && !empty($userInfo['openid'])) {
+            if (!is_empty($userInfo) && !is_empty($userInfo['openid'])) {
                 return $userInfo;
             }
 

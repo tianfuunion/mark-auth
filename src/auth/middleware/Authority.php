@@ -94,6 +94,7 @@
             if (stripos(Request::server('request_uri'), 'captcha') !== false || Request::server('request_uri') == '/') {
                 // return $response;
                 // return $next($request);
+                return $this->response('', 200);
             }
 
             $ignore = $this->internalIgnore();
@@ -102,6 +103,7 @@
                     if (stripos(rtrim(Request::server('request_uri'), "/"), $item)) {
                         // return $response;
                         // return $next($request);
+                        return $this->response('', 200);
                     }
                 }
             }
@@ -154,6 +156,7 @@
                 // 该页面为公开页面，无需检查
                 // return $response;
                 // return $next($request);
+                return $this->response('', 200);
             }
 
             // 更新用户登录有效期
@@ -178,6 +181,7 @@
             if ($channel[AuthInfo::$modifier] == AuthInfo::$default) {
                 // return $response;
                 // return $next($request);
+                return $this->response('', 200);
             }
 
             // 不为默认则必获取授权
