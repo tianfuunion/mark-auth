@@ -56,9 +56,8 @@
             $cacheKey .= ':domain:' . $url;
 
             // TODO：临时关闭缓存
-            $channel = Cache::get($cacheKey);
-            // $channel = $this->authority->$cache::get($cacheKey);
-
+            // $channel = Cache::get($cacheKey);
+            $channel = $this->authority->cache::get($cacheKey);
             if ($cache == 1 && $channel) {
                 // return $channel;
             }
@@ -160,8 +159,7 @@
 
             // TODO：临时关闭缓存
             // $channel = Cache::get($cacheKey);
-            // $channel = $this->authority->$cache::get($cacheKey);
-            $channel = false;
+            $channel = $this->authority->cache::get($cacheKey);
             if ($cache == 1 && $channel) {
                 // return $channel;
             }

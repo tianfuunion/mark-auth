@@ -30,7 +30,7 @@
         /**
          * @var CacheInterface
          */
-        protected $cache;
+        public $cache;
 
         protected $expire = 1440;
 
