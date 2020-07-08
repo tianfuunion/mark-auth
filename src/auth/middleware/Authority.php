@@ -103,7 +103,7 @@
             // $result = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
             $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->cache) ? 1 : 0);
 
-            $this->logcat('error', 'Authority::handler(Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+            $this->logcat('info', 'Authority::handler(Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
             if (Authorize::isAdmin() || Authorize::isTesting()) {
                 $this->logcat('debug', 'Authority::Check(Super Manager has Channel privileges)' . $identifier);
@@ -129,7 +129,7 @@
                     $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Ajax Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                     return $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
-                } elseif (is_get()) {
+                } elseif (is_get() || Request::isGet()) {
                     // $response = Authorize::request(true);
                     $url = Config::get('auth.host') . '/auth.php/login/login?backurl=' . urlencode(Request::url(true));
 
@@ -151,7 +151,7 @@
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                         return $this->response('', 407);
-                    } elseif (is_get()) {
+                    } elseif (is_get() || Request::isGet()) {
                         $url = Config('auth.host') . '/auth.php/authorize/choice'
                             // $url = Config::get('auth.host') . '/auth.php/oauth2/authorize'
                             . '?appid=' . Config::get('auth.appid')
