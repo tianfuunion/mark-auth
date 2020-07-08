@@ -102,10 +102,6 @@
                         $this->logcat('info', '排除自定义项：标识符' . $this->getIdentifier());
                         $response = $this->response('', 200);
                         break;
-                    } elseif (stripos(rtrim($_SERVER['request_uri'], "/"), $item)) {
-                        $this->logcat('info', '自定义排除项：Url' . $_SERVER['request_uri']);
-                        $response = $this->response('', 200);
-                        break;
                     }
                 }
             }
@@ -157,15 +153,13 @@
                     $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Ajax Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                     $response = $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
-                }
-
-                if (Request::isGet()) {
+                } elseif (Request::isGet()) {
                     $response = Authorize::request(true);
+                } else {
+                    $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+
+                    $response = $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
                 }
-
-                $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
-
-                $response = $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
             } else {
                 $this->session->set('expiretime', time() + (int)round(abs($this->expire)));
 
@@ -178,17 +172,13 @@
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                         $response = $this->response('', 407);
-                    }
-
-                    if (Request::isGet()) {
+                    } elseif (Request::isGet()) {
                         return Authorize::authentication(Config::get('auth.appid'), Request::url(true));
+                    } else {
+                        $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+                        $response = $this->response('', 407);
+                        return AuthUnion::request(true);
                     }
-
-                    return AuthUnion::request(true);
-
-                    $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
-
-                    $response = $this->response('', 407);
                 } else {
                     $access = $this->channel->getAccess($channel['channelid'], $this->getIdentifier(), $this->session->get('uid'), $this->session->get('union.roleid', 404), $this->cache);
 
