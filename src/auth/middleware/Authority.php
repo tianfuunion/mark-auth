@@ -5,13 +5,12 @@
     namespace mark\auth\middleware;
 
     use think\facade\Config;
+    use think\facade\Request;
 
     use mark\auth\AuthUnion;
     use mark\auth\Authorize;
     use mark\auth\entity\AuthInfo;
     use mark\auth\model\Channel;
-
-    use mark\request\Request;
 
     use mark\system\Os;
     use Psr\SimpleCache\CacheInterface;
