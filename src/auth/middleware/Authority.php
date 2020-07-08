@@ -27,7 +27,10 @@
         protected $appid = '';
         protected $poolid = '';
         protected $debug = false;
-        protected $cache = false;
+        /**
+         * @var CacheInterface
+         */
+        protected $cache;
 
         protected $expire = 1440;
 

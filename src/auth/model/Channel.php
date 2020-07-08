@@ -159,8 +159,8 @@
             $cacheKey .= ':identifier:' . $identifier;
 
             // TODO：临时关闭缓存
-            // $channel = Cache::get($cacheKey);
-            $channel = $this->authority->$cache::get($cacheKey);
+            $channel = Cache::get($cacheKey);
+            // $channel = $this->authority->$cache::get($cacheKey);
             if ($cache == 1 && $channel) {
                 // return $channel;
             }
@@ -211,7 +211,7 @@
 
             if (!empty($result) && $cache) {
                 Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
-                $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
             } else {
                 Cache::delete($cacheKey);
                 self::runevent();
@@ -274,7 +274,7 @@
                     $result = $access;
                     if ($cache) {
                         Cache::set($cacheKey, $access, Config::get('session.expire', 1440));
-                        $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                        // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
                     } else {
                         Cache::delete($cacheKey);
                     }
