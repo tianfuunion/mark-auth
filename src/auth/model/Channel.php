@@ -58,7 +58,7 @@
             // TODO：临时关闭缓存
             // $channel = Cache::get($cacheKey);
             $channel = $this->authority->cache->get($cacheKey);
-            if ($cache == 1 && $channel) {
+            if ($cache == 1 && !empty($channel)) {
                 // return $channel;
             }
 
@@ -159,8 +159,8 @@
 
             // TODO：临时关闭缓存
             // $channel = Cache::get($cacheKey);
-            $channel = $this->authority->cache->get($cacheKey);
-            if ($cache == 1 && $channel) {
+            $result = $this->authority->cache->get($cacheKey);
+            if ($cache == 1 && !empty($result)) {
                 // return $channel;
             }
 
