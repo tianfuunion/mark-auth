@@ -65,20 +65,6 @@
             $this->expire = $expire;
         }
 
-        private $before_handle;
-
-        final protected function before_handle(callable $callback): void
-        {
-            $this->before_handle = $callback;
-        }
-
-        private $after_handle;
-
-        final protected function after_handle(callable $callback): void
-        {
-            $this->after_handle = $callback;
-        }
-
         /**
          * 处理器
          *
@@ -97,18 +83,25 @@
              * TODO：一、排除自定义排除项,随后数据来源可从数据库中获取
              */
             $ignore = $this->internalIgnore();
+            $identifier = $this->getIdentifier();
+
+            if (empty($identifier)) {
+                $this->logcat('error', '无效的频道标识符：标识符' . $identifier);
+                return $this->response($identifier, 404, '', '无效的频道标识符', 'json');
+            }
+
             if (!empty($ignore) && is_array($ignore)) {
                 foreach ($ignore as $key => $item) {
-                    if (stripos($this->getIdentifier(), $item)) {
-                        $this->logcat('info', '排除自定义项：标识符' . $this->getIdentifier());
-                        $response = $this->response('', 200, '', '', 'json');
+                    if (stripos($identifier, $item)) {
+                        $this->logcat('info', '排除自定义项：标识符 ' . $identifier);
+                        return $this->response('', 200, '', '', 'json');
                         break;
                     }
                 }
             }
 
             // $result = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
-            $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), !empty($this->cache) ? 1 : 0);
+            $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->cache) ? 1 : 0);
 
             $this->logcat('error', 'Authority::handler(Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
@@ -129,79 +122,85 @@
             // 不为公开则必检查* 检查频道是否需要权限检查
             if (!empty($channel) && $channel[AuthInfo::$modifier] == AuthInfo::$public) {
                 // 该页面为公开页面，无需检查
-                $this->logcat('info', '该页面为公开页面，无需检查：' . $this->getIdentifier());
-                $response = $this->response('', 200);
+                $this->logcat('info', '该页面为公开页面，无需检查：' . $identifier);
+                return $this->response('', 200);
             } elseif (!Authorize::isLogin()) {
                 if (is_ajax() || is_pjax()) {
                     $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Ajax Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-                    $response = $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
+                    return $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
                 } elseif (is_get()) {
-                    $response = Authorize::request(true);
+                    // $response = Authorize::request(true);
+                    $url = Config::get('auth.host') . '/auth.php/login/login?backurl=' . urlencode(Request::url(true));
+
+                    return $this->response($url, 302, 'Unauthorized', '登录请求');
                 } else {
                     $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-                    $response = $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
+                    return $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
                 }
             } else {
                 $this->session->set('expiretime', time() + (int)round(abs($this->expire)));
 
                 if (!empty($channel) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
-                    $this->logcat('info', '默认权限，仅登录即可：' . $this->getIdentifier());
+                    $this->logcat('info', '默认权限，仅登录即可：' . $identifier);
                     return $this->response('', 200);
                 } elseif (!Authorize::isUnion()) {
                     // 获取联合授权
                     if (is_ajax()) {
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-                        $response = $this->response('', 407);
+                        return $this->response('', 407);
                     } elseif (is_get()) {
-                        return Authorize::authentication(Config::get('auth.appid'), Request::url(true));
+                        $url = $url = Config('auth.host') . '/auth.php/authorize/choice'
+                            // $url = Config::get('auth.host') . '/auth.php/oauth2/authorize'
+                            . '?appid=' . Config::get('auth.appid')
+                            . '&redirect_uri=' . urlencode(Request::url(true))
+                            . '&response_type=code'
+                            . '&scope=snsapi_base'
+                            . '&access_type=offline'
+                            . '&state=' . md5(uniqid((string)time(), true));
+                        return $this->response($url, 302, 'Unauthorized', '登录请求');
+                        // return Authorize::authentication(Config::get('auth.appid'), Request::url(true));
                     } else {
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
-                        $response = $this->response('', 407);
-                        return AuthUnion::request(true);
+                        return $this->response('', 407);
+                        // return AuthUnion::request(true);
                     }
                 } else {
-                    $access = $this->channel->getAccess($channel['channelid'], $this->getIdentifier(), $this->session->get('uid'), $this->session->get('union.roleid', 404), $this->cache);
+                    $access = $this->channel->getAccess($channel['channelid'], $identifier, $this->session->get('uid'), $this->session->get('union.roleid', 404), $this->cache);
 
                     if (!empty($access) && $access['status'] == 1 && $access['allow'] == 1 && stripos($access['method'], Request::method()) != false) {
                         $this->logcat('info', 'Authority::Check(Success::' . Request::method() . ' ' . __LINE__ . ')' . Request::url(true));
 
-                        $response = $this->response('', 200);
+                        return $this->response('', 200);
                     } elseif (Authorize::isAdmin()) {
                         $this->logcat('debug', 'Authority::Check(Super Manager has Method[' . Request::method() . ' ' . __LINE__ . '] privileges)');
 
-                        $response = $this->response('', 200);
+                        return $this->response('', 200);
                     } elseif (!empty($access) && $access['status'] == 1 && $access['allow'] != 1) {
                         $this->logcat('debug', 'Authority::Check(Allow ' . __LINE__ . ')  ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
-                        $response = $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
+                        return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
                     } elseif (is_ajax() && !empty($access) && $access['status'] == 1 && stripos($access['method'], 'ajax') == false) {
                         $this->logcat('error', 'Authority::checkChannel(405 ' . __LINE__ . ') Ajax Method Not Allowed ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
-                        $response = $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
+                        return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
                     } elseif (!empty($access) && $access['status'] == 1 && stripos($access['method'], Request::method()) == false) {
                         $this->logcat('error', 'Authority::checkChannel(405 ' . __LINE__ . ') ' . Request::method() . ' Method Not Allowed ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
-                        $response = $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
+                        return $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
                     } elseif (empty($access) || $access['status'] != 1) {
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Invalid authorization information ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
-                        $response = $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
+                        return $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
                     } else {
                         $this->logcat('error', 'Authority::checkChannel(406 ' . __LINE__ . ') Not Acceptable ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
-                        $response = $this->response('', 406, 'Not Acceptable', '授权信息异常');
+                        return $this->response('', 406, 'Not Acceptable', '授权信息异常');
                     }
                 }
             }
-
-            if (!empty($this->after_handle)) {
-                call_user_func_array($this->after_handle, array());
-            }
-
-            return $response;
         }
 
         /**
@@ -292,7 +291,7 @@
          * @param string $type
          * @return mixed
          */
-        abstract function response($data, $code = 200, $status = '', $msg = '', $type = 'html');
+        abstract function response($data, $code = 200, $status = '', $msg = '', $type = 'json');
 
         /**
          * @param $level

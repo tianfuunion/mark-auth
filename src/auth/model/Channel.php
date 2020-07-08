@@ -100,7 +100,7 @@
             }
 
             $curl = Curl::getInstance()
-                ->post(Config::get('auth.host') . '/api.php/ram/channel')
+                ->get(Config::get('auth.host') . '/api.php/ram/channel')
                 ->appendData('appid', $appid)
                 ->appendData('cache', $cache)
                 ->appendData('url', urlencode($url));
@@ -196,7 +196,7 @@
             }
 
             $channel = Curl::getInstance()
-                ->post(Config::get('auth.host') . '/api.php/ram/identifier')
+                ->get(Config::get('auth.host') . '/api.php/ram/identifier')
                 ->appendData('poolid', $poolid)
                 ->appendData('appid', $appid)
                 ->appendData('cache', $cache)
