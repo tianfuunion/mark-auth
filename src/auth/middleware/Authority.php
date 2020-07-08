@@ -106,7 +106,7 @@
             $this->logcat('error', 'Authority::handler(Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
             if (Authorize::isAdmin() || Authorize::isTesting()) {
-                $this->logcat('debug', 'Authority::Check(Super Manager has Channel privileges)');
+                $this->logcat('debug', 'Authority::Check(Super Manager has Channel privileges)' . $identifier);
             } elseif (!empty($channel)) {
                 if ($channel['status'] != 1) {
                     $this->logcat('error', 'Authority::checkChannel(501 ' . __LINE__ . ') Channel information not available ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
@@ -152,7 +152,7 @@
 
                         return $this->response('', 407);
                     } elseif (is_get()) {
-                        $url = $url = Config('auth.host') . '/auth.php/authorize/choice'
+                        $url = Config('auth.host') . '/auth.php/authorize/choice'
                             // $url = Config::get('auth.host') . '/auth.php/oauth2/authorize'
                             . '?appid=' . Config::get('auth.appid')
                             . '&redirect_uri=' . urlencode(Request::url(true))
