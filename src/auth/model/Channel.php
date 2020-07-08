@@ -221,6 +221,83 @@
         }
 
         /**
+         * 获取授权信息
+         *
+         * TODO：授权信息查询，存在BUG，无法隔离App
+         * @param $channelid
+         * @param $uuid
+         * @param $roleid
+         * @param int $cache
+         * @return |null
+         */
+        public function getAccess($channelid = 0, $roleid = 404, $cache = 1)
+        {
+            $cacheKey = 'Channel:Access:roleid:' . $channelid . ':channelid:' . $channelid;
+
+            try {
+                $union = Db::name('union')
+                    ->field(true)
+                    // ->where("appid", "=", $this->appid)
+                    ->where('uid', '=', !empty($uuid) ? $uuid : 404)
+                    ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
+                    ->order('subtime desc')
+                    ->cache($cache)
+                    ->find();
+                // 查询角色信息 * 可删除
+                $role = Db::name('role')
+                    ->field(true)
+                    ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
+                    ->order('subtime desc')
+                    ->cache($cache)
+                    ->find();
+
+                $access = Curl::getInstance()
+                    ->post(Config::get('auth.host') . '/api.php/ram/access')
+                    ->appendData('roleid', $roleid)
+                    ->appendData('cache', $cache)
+                    ->appendData('channelid', $channelid)
+                    ->toArray();
+                if (!empty($access)) {
+                    // 根据当前频道查询可访问的方法
+                    // @todo AppId 存在Bug
+                    $access = Db::name('access')
+                        ->field(true)
+                        ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
+                        // ->where("appid", "=", $this->appid)
+                        ->where('channelid', '=', $channelid)
+                        ->order('subtime desc')
+                        ->cache($cache)
+                        ->find();
+                }
+                if (!empty($access)) {
+                    $result = array('data' => $access, 'code' => 200, 'status' => 'ok', 'msg' => '');
+                    if ($cache) {
+                        Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                        $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                    } else {
+                        Cache::delete($cacheKey);
+                    }
+                } else {
+                    $result = array('data' => $access, 'code' => 404, 'status' => 'Failure', 'msg' => '无效的授权信息');
+                }
+            } catch (DataNotFoundException $e) {
+                $this->authority->logcat('error', 'Authority::Check(DataNotFoundException ' . __LINE__ . ')' . $e->getMessage());
+
+                $result = array('data' => '', 'code' => 500, 'status' => 'DataNotFoundException', 'msg' => '服务异常');
+            } catch (ModelNotFoundException $e) {
+                $this->authority->logcat('error', 'Authority::Check(ModelNotFoundException ' . __LINE__ . ')' . $e->getMessage());
+
+                $result = array('data' => '', 'code' => 500, 'status' => 'ModelNotFoundException', 'msg' => '服务异常');
+            } catch (DbException $e) {
+                $this->authority->logcat('error', 'Authority::Check(DbException ' . __LINE__ . ')' . $e->getMessage());
+
+                $result = array('data' => '', 'code' => 500, 'status' => 'DbException', 'msg' => '服务异常');
+            }
+
+            return $result;
+        }
+
+        /**
          * TODO：发送消息通知的方式无法共用，并不是每个系统都有这个方法
          * TODO：可以用发送post消息的方式，将消息发送到消息中心
          *
