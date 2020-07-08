@@ -112,18 +112,18 @@
 
             $this->logcat('error', 'Authority::handler(Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-            if (Authorize::isAdmin()) {
+            if (Authorize::isAdmin() || Authorize::isTesting()) {
                 $this->logcat('debug', 'Authority::Check(Super Manager has Channel privileges)');
             } elseif (!empty($channel)) {
                 if ($channel['status'] != 1) {
                     $this->logcat('error', 'Authority::checkChannel(501 ' . __LINE__ . ') Channel information not available ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-                    $response = $this->response('', 503, 'Channel information not available', '该频道尚未启用');
+                    return $this->response('', 503, 'Channel information not available', '该频道尚未启用');
                 }
             } else {
                 $this->logcat('error', 'Authority::checkChannel(412 ' . __LINE__ . ') Invalid Channel information' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-                $response = $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
+                return $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
             }
 
             // 不为公开则必检查* 检查频道是否需要权限检查
