@@ -4,10 +4,13 @@
 
     namespace mark\auth\middleware;
 
+    use think\facade\Config;
+
     use mark\auth\AuthUnion;
     use mark\auth\Authorize;
     use mark\auth\entity\AuthInfo;
     use mark\auth\model\Channel;
+
     use mark\request\Request;
 
     use mark\system\Os;
@@ -92,8 +95,7 @@
              * TODO：1、排除验证码,随后数据来源可从数据库中获取
              */
             if (stripos(Request::server('request_uri'), 'captcha') !== false || Request::server('request_uri') == '/') {
-                // return $response;
-                // return $next($request);
+                $this->logcat('info', '排除验证码：' . $this->getIdentifier());
                 return $this->response('', 200);
             }
 
@@ -101,21 +103,16 @@
             if (!empty($ignore) && is_array($ignore)) {
                 foreach ($ignore as $key => $item) {
                     if (stripos(rtrim(Request::server('request_uri'), "/"), $item)) {
-                        // return $response;
-                        // return $next($request);
+                        $this->logcat('info', '自定义排除项：' . $this->getIdentifier());
                         return $this->response('', 200);
                     }
                 }
             }
 
             // $result = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
-            $result = null;
-
-            $identifier = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), $this->cache);
-            $result = $identifier;
+            $result = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), $this->cache);
 
             $this->logcat('error', 'Result:' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
 
             if (!empty($result)) {
                 if (is_string($result)) {
@@ -154,8 +151,7 @@
             // 不为公开则必检查* 检查频道是否需要权限检查
             if ($channel[AuthInfo::$modifier] == AuthInfo::$public) {
                 // 该页面为公开页面，无需检查
-                // return $response;
-                // return $next($request);
+                $this->logcat('info', '该页面为公开页面，无需检查：' . $this->getIdentifier());
                 return $this->response('', 200);
             }
 
@@ -179,12 +175,11 @@
             }
 
             if ($channel[AuthInfo::$modifier] == AuthInfo::$default) {
-                // return $response;
-                // return $next($request);
+                $this->logcat('info', '默认权限，仅登录即可：' . $this->getIdentifier());
                 return $this->response('', 200);
             }
 
-            // 不为默认则必获取授权
+            // 获取联合授权
             if (!Authorize::isUnion()) {
                 if (Request::isAjax()) {
                     $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
@@ -193,9 +188,10 @@
                 }
 
                 if (Request::isGet()) {
-                    // return $this->redirect();
-                    return AuthUnion::request(true);
+                    return Authorize::authentication(Config::get('auth.appid'), Request::url(true));
                 }
+
+                return AuthUnion::request(true);
 
                 $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
@@ -308,6 +304,8 @@
         abstract function getIdentifier(): string;
 
         /**
+         * 获取内部排除项
+         *
          * @return array
          */
         private function internalIgnore(): array

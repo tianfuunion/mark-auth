@@ -21,18 +21,22 @@
          * @param int $state
          *
          * @return Redirect
+         * @deprecated
+         * @see Authorize::authentication()
          */
-        public static function request(bool $complete = false, $response = 'code', $scope = 'snsapi_base', $access_type = 'offline', $state = 1234)
+        public static function request($complete = false, $response = 'code', $scope = 'snsapi_base', $access_type = 'offline', $state = 0)
         {
+
             $url = Config('auth.host') . '/auth.php/authorize/choice'
-                // $url = Config::get('auth.host') . '/auth.php/oauth2/authorize'
-                . '?appid=' . Config('auth.appid')
-                . '&redirect_uri=' . urlencode(Request::url($complete))
-                . '&response_type=' . $response
-                . '&scope=openid'
-                . '&scope=' . ($scope === 'snsapi_base' ? 'snsapi_base' : 'snsapi_userinfo')
-                . '&access_type=' . $access_type
-                . '&state=' . $state;
+            // $url = Config::get('auth.host') . '/auth.php/oauth2/authorize'
+            . '?appid=' . Config('auth.appid')
+            . '&redirect_uri=' . urlencode(Request::url($complete))
+            . '&response_type=' . $response
+            . '&scope=openid'
+            . '&scope=' . ($scope === 'snsapi_base' ? 'snsapi_base' : 'snsapi_userinfo')
+            . '&access_type=' . $access_type
+            . '&state=' . $state !== 0 ? $state : md5(uniqid((string)time(), true));
+
             header('Location:' . $url);
 
             return redirect($url, 401);
