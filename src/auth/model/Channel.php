@@ -159,8 +159,9 @@
             $cacheKey .= ':identifier:' . $identifier;
 
             // TODO：临时关闭缓存
-            $channel = Cache::get($cacheKey);
+            // $channel = Cache::get($cacheKey);
             // $channel = $this->authority->$cache::get($cacheKey);
+            $channel = false;
             if ($cache == 1 && $channel) {
                 // return $channel;
             }
@@ -184,22 +185,18 @@
                         } else {
                             Cache::delete($cacheKey);
                         }
-
-                        return array('data' => $result, 'code' => 200, 'status' => 'OK', 'msg' => '本地请求');
+                        return $result;
                     }
                 } catch (DataNotFoundException $e) {
                     $this->authority->logcat('error', 'Channel::getChannel(DataNotFoundException)' . $e->getMessage());
-                    $result = array('data' => '', 'code' => 500, 'status' => 'DataNotFoundException', 'msg' => '服务异常');
                 } catch (ModelNotFoundException $e) {
                     $this->authority->logcat('error', 'Channel::getChannel(ModelNotFoundException)' . $e->getMessage());
-                    $result = array('data' => '', 'code' => 500, 'status' => 'ModelNotFoundException', 'msg' => '服务异常');
                 } catch (DbException $e) {
                     $this->authority->logcat('error', 'Channel::getChannel(DbException)' . $e->getMessage());
-                    $result = array('data' => '', 'code' => 500, 'status' => 'DbException', 'msg' => '服务异常');
                 }
                 self::runevent();
 
-                return array('data' => $result, 'code' => 404, 'status' => 'Failure', 'msg' => '无效的频道信息');
+                return array();
             }
 
             $result = Curl::getInstance()
