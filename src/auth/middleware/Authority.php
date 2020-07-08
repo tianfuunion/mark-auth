@@ -190,7 +190,7 @@
 
                     $response = $this->response('', 407);
                 } else {
-                    $access = $this->channel->getAccess($channel['channelid'], $this->session->get('uid'), $this->session->get('union.roleid', 404), $this->cache);
+                    $access = $this->channel->getAccess($channel['channelid'], $this->getIdentifier(), $this->session->get('uid'), $this->session->get('union.roleid', 404), $this->cache);
 
                     if (!empty($access) && $access['status'] == 1 && $access['allow'] == 1 && stripos($access['method'], Request::method()) != false) {
                         $this->logcat('info', 'Authority::Check(Success::' . Request::method() . ' ' . __LINE__ . ')' . Request::url(true));

@@ -224,15 +224,25 @@
          * 获取授权信息
          *
          * TODO：授权信息查询，存在BUG，无法隔离App
-         * @param $channelid
-         * @param $uuid
-         * @param $roleid
+         * @param int $channelid
+         * @param int $roleid
          * @param int $cache
-         * @return |null
+         * @return array|bool|false|mixed|string|null
          */
-        public function getAccess($channelid = 0, $roleid = 404, $cache = 1)
+        public function getAccess($channelid = 0, string $identifier, $roleid = 404, $cache = 1)
         {
             $cacheKey = 'Channel:Access:roleid:' . $channelid . ':channelid:' . $channelid;
+            $result = Curl::getInstance()
+                ->get(Config::get('auth.host') . '/api.php/ram/access')
+                ->appendData('roleid', $roleid)
+                ->appendData('cache', $cache)
+                ->appendData('channelid', $channelid)
+                ->appendData('identifier', $identifier)
+                ->toArray();
+
+            if (!empty($result) && $result['code'] == 200) {
+                return $result['data'];
+            }
 
             try {
                 $union = Db::name('union')
@@ -251,47 +261,36 @@
                     ->cache($cache)
                     ->find();
 
-                $access = Curl::getInstance()
-                    ->post(Config::get('auth.host') . '/api.php/ram/access')
-                    ->appendData('roleid', $roleid)
-                    ->appendData('cache', $cache)
-                    ->appendData('channelid', $channelid)
-                    ->toArray();
+                // 根据当前频道查询可访问的方法
+                $access = Db::name('access')
+                    ->field(true)
+                    ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
+                    // ->where("appid", "=", $this->appid)
+                    ->where('channelid', '=', $channelid)
+                    ->order('subtime desc')
+                    ->cache($cache)
+                    ->find();
                 if (!empty($access)) {
-                    // 根据当前频道查询可访问的方法
-                    // @todo AppId 存在Bug
-                    $access = Db::name('access')
-                        ->field(true)
-                        ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
-                        // ->where("appid", "=", $this->appid)
-                        ->where('channelid', '=', $channelid)
-                        ->order('subtime desc')
-                        ->cache($cache)
-                        ->find();
-                }
-                if (!empty($access)) {
-                    $result = array('data' => $access, 'code' => 200, 'status' => 'ok', 'msg' => '');
+                    $result = $access;
                     if ($cache) {
-                        Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                        Cache::set($cacheKey, $access, Config::get('session.expire', 1440));
                         $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
                     } else {
                         Cache::delete($cacheKey);
                     }
-                } else {
-                    $result = array('data' => $access, 'code' => 404, 'status' => 'Failure', 'msg' => '无效的授权信息');
                 }
             } catch (DataNotFoundException $e) {
                 $this->authority->logcat('error', 'Authority::Check(DataNotFoundException ' . __LINE__ . ')' . $e->getMessage());
 
-                $result = array('data' => '', 'code' => 500, 'status' => 'DataNotFoundException', 'msg' => '服务异常');
+                $result = null;
             } catch (ModelNotFoundException $e) {
                 $this->authority->logcat('error', 'Authority::Check(ModelNotFoundException ' . __LINE__ . ')' . $e->getMessage());
 
-                $result = array('data' => '', 'code' => 500, 'status' => 'ModelNotFoundException', 'msg' => '服务异常');
+                $result = null;
             } catch (DbException $e) {
                 $this->authority->logcat('error', 'Authority::Check(DbException ' . __LINE__ . ')' . $e->getMessage());
 
-                $result = array('data' => '', 'code' => 500, 'status' => 'DbException', 'msg' => '服务异常');
+                $result = null;
             }
 
             return $result;
