@@ -174,7 +174,7 @@
                         ->where('app.appid', '=', $appid)
                         ->where('channel.identifier', '=', $identifier)
                         ->order('channel.displayorder asc')
-                        ->cache(false)
+                        ->cache($cache)
                         ->find();
 
                     if (!empty($result)) {
@@ -193,16 +193,28 @@
                     $this->authority->logcat('error', 'Channel::getChannel(DbException)' . $e->getMessage());
                 }
                 self::runevent();
-
-                return array();
             }
 
-            $result = Curl::getInstance()
+            $channel = Curl::getInstance()
                 ->post(Config::get('auth.host') . '/api.php/ram/identifier')
+                ->appendData('poolid', $poolid)
                 ->appendData('appid', $appid)
                 ->appendData('cache', $cache)
                 ->appendData('identifier', $identifier)
                 ->toArray();
+
+            if (!empty($channel)) {
+                if (is_string($channel)) {
+                    $channel = json_decode($channel, true);
+                }
+
+                if (!empty($channel) && $channel['code'] == 200) {
+                    $result = $channel['data'];
+                }
+            } else {
+                $result = array();
+                $this->logcat('error', 'Result:' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+            }
 
             if (!empty($result) && $cache) {
                 Cache::set($cacheKey, $result, Config::get('session.expire', 1440));

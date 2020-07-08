@@ -82,7 +82,7 @@
         /**
          * 处理器
          *
-         * @return \think\response\Redirect
+         * @return mixed
          */
         protected function handler()
         {
@@ -101,35 +101,16 @@
                 foreach ($ignore as $key => $item) {
                     if (stripos($this->getIdentifier(), $item)) {
                         $this->logcat('info', '排除自定义项：标识符' . $this->getIdentifier());
-                        $response = $this->response('', 200);
+                        $response = $this->response('', 200, '', '', 'json');
                         break;
                     }
                 }
             }
 
             // $result = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
-            $result = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), $this->cache ? 1 : 0);
+            $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), !empty($this->cache) ? 1 : 0);
 
-            $this->logcat('error', 'Result:' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-            if (!empty($result)) {
-                if (is_string($result)) {
-                    $result = json_decode($result, true);
-                }
-                switch ($result['code']) {
-                    case 200:
-                        $channel = $result['data'];
-                        break;
-                    default:
-                        $channel = array();
-                        $response = $this->response($result['data'], $result['code'], $result['status'], $result['msg']);
-                        break;
-                }
-            } else {
-                $channel = array();
-                $this->logcat('error', 'Result:' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                $response = $this->response('', 503);
-            }
+            $this->logcat('error', 'Authority::handler(Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
             if (Authorize::isAdmin()) {
                 $this->logcat('debug', 'Authority::Check(Super Manager has Channel privileges)');
@@ -252,6 +233,8 @@
                 'index:index:index',
                 'portal:*',
                 'captcha',
+                '404',
+                '502'
             ));
         }
 
@@ -299,8 +282,23 @@
          */
         abstract function redirect(string $url = '', int $code = 302);
 
+        /**
+         * 响应输出
+         *
+         * @param $data
+         * @param int $code
+         * @param string $status
+         * @param string $msg
+         * @param string $type
+         * @return mixed
+         */
         abstract function response($data, $code = 200, $status = '', $msg = '', $type = 'html');
 
+        /**
+         * @param $level
+         * @param $message
+         * @param array $context
+         */
         public function logcat($level, $message, array $context = []): void
         {
         }
