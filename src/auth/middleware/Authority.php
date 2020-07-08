@@ -15,7 +15,6 @@
 
     use mark\system\Os;
     use Psr\SimpleCache\CacheInterface;
-    use function GuzzleHttp\Promise\each_limit;
 
     /**
      * Class Authority
@@ -57,7 +56,7 @@
             $this->debug = $debug;
         }
 
-        final function setCache(CacheInterface $cache): void
+        final function setCache($cache): void
         {
             $this->cache = $cache;
         }
@@ -110,7 +109,7 @@
             }
 
             // $result = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
-            $result = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), $this->cache);
+            $result = $this->channel->getIdentifier($this->poolid, $this->appid, $this->getIdentifier(), $this->cache ? 1 : 0);
 
             $this->logcat('error', 'Result:' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
@@ -123,12 +122,13 @@
                         $channel = $result['data'];
                         break;
                     default:
+                        $channel = array();
                         $response = $this->response($result['data'], $result['code'], $result['status'], $result['msg']);
                         break;
                 }
             } else {
+                $channel = array();
                 $this->logcat('error', 'Result:' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
                 $response = $this->response('', 503);
             }
 
@@ -147,16 +147,16 @@
             }
 
             // 不为公开则必检查* 检查频道是否需要权限检查
-            if ($channel[AuthInfo::$modifier] == AuthInfo::$public) {
+            if (!empty($channel) && $channel[AuthInfo::$modifier] == AuthInfo::$public) {
                 // 该页面为公开页面，无需检查
                 $this->logcat('info', '该页面为公开页面，无需检查：' . $this->getIdentifier());
                 $response = $this->response('', 200);
             } elseif (!Authorize::isLogin()) {
-                if (Request::isAjax() || Request::isPjax()) {
+                if (is_ajax() || is_pjax()) {
                     $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Ajax Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                     $response = $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
-                } elseif (Request::isGet()) {
+                } elseif (is_get()) {
                     $response = Authorize::request(true);
                 } else {
                     $this->logcat('error', 'Authority::checkChannel(401 ' . __LINE__ . ') Unauthorized Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
@@ -166,16 +166,16 @@
             } else {
                 $this->session->set('expiretime', time() + (int)round(abs($this->expire)));
 
-                if ($channel[AuthInfo::$modifier] == AuthInfo::$default) {
+                if (!empty($channel) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
                     $this->logcat('info', '默认权限，仅登录即可：' . $this->getIdentifier());
                     return $this->response('', 200);
                 } elseif (!Authorize::isUnion()) {
                     // 获取联合授权
-                    if (Request::isAjax()) {
+                    if (is_ajax()) {
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Ajax Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
                         $response = $this->response('', 407);
-                    } elseif (Request::isGet()) {
+                    } elseif (is_get()) {
                         return Authorize::authentication(Config::get('auth.appid'), Request::url(true));
                     } else {
                         $this->logcat('error', 'Authority::checkChannel(407 ' . __LINE__ . ') Proxy Authentication Required Channel() ' . json_encode($channel, JSON_UNESCAPED_UNICODE));
@@ -197,7 +197,7 @@
                         $this->logcat('debug', 'Authority::Check(Allow ' . __LINE__ . ')  ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
                         $response = $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
-                    } elseif (Request::isAjax() && !empty($access) && $access['status'] == 1 && stripos($access['method'], 'ajax') == false) {
+                    } elseif (is_ajax() && !empty($access) && $access['status'] == 1 && stripos($access['method'], 'ajax') == false) {
                         $this->logcat('error', 'Authority::checkChannel(405 ' . __LINE__ . ') Ajax Method Not Allowed ' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
                         $response = $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
