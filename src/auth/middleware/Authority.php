@@ -98,10 +98,9 @@ abstract class Authority {
         /**
          * @todo 2、校验标识符，校验频道状态
          */
-        if (Authorize::isAdmin() || Authorize::isTesting()) {
+        $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->cache) ? 1 : 0);
+        if (empty($channel)) {
             $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
-        } else {
-            $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->cache) ? 1 : 0);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
