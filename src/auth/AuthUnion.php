@@ -4,7 +4,6 @@
 
     namespace mark\auth;
 
-    use think\facade\Config;
     use think\facade\Request;
     use think\response\Redirect;
 

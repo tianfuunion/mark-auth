@@ -31,7 +31,7 @@ class Client {
      * @return \think\response\Redirect
      */
     public function request() {
-        return redirect(Config::get('auth.host') . '/auth.php/login/login?backurl=' . urlencode(Request::url(true)));
+        return redirect(Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true)));
     }
 
     /**
