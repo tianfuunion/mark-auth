@@ -38,23 +38,23 @@ abstract class Authority {
         $this->channel = new Channel($this);
     }
 
-    final function setAppId($appid): void {
+    final public function setAppId($appid): void {
         $this->appid = $appid;
     }
 
-    final function setPoolId($poolid): void {
+    final public function setPoolId($poolid): void {
         $this->poolid = $poolid;
     }
 
-    final function setDebug($debug): void {
+    final public function setDebug($debug): void {
         $this->debug = $debug;
     }
 
-    final function setCache($cache): void {
+    final public function setCache(CacheInterface $cache): void {
         $this->cache = $cache;
     }
 
-    final function setExpire($expire): void {
+    final public function setExpire($expire): void {
         $this->expire = $expire;
     }
 
@@ -63,17 +63,12 @@ abstract class Authority {
      *
      * @return mixed
      */
-    protected function handler() {
-        if (!empty($this->before_handle)) {
-            call_user_func_array($this->before_handle, array());
-        }
-
+    final protected function handler() {
         // 初始化
         $this->initialize();
 
         /**
          * @todo：2、排除自定义排除项,随后数据来源可从数据库中获取
-         *
          */
         $ignore = $this->internalIgnore();
         $identifier = $this->getInternalIdentifier();
@@ -84,10 +79,20 @@ abstract class Authority {
             return $this->response($identifier, 404, '', '无效的频道标识符', 'json');
         }
 
+        if ($this->has_exclude($identifier)) {
+            $this->logcat('info', '自定义排除算法：' . $identifier);
+
+            return $this->response('', 200, '', '', 'json');
+        };
+
+        /**
+         * @todo 排除自定义标识符：存在Bug，以下情况可能会排除
+         * {auth:index:index = index:index}
+         */
         if (!empty($ignore) && is_array($ignore)) {
             foreach ($ignore as $key => $item) {
-                if (stripos($identifier, $item)) {
-                    $this->logcat('info', '排除自定义项：标识符 ' . $identifier);
+                if (stripos($identifier, $item) !== false) {
+                    $this->logcat('info', '排除自定义标识符：' . $identifier . ' = ' . $item);
 
                     return $this->response('', 200, '', '', 'json');
                     break;
@@ -98,9 +103,9 @@ abstract class Authority {
         /**
          * @todo 2、校验标识符，校验频道状态
          */
-        $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->cache) ? 1 : 0);
+        $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->debug) ? 1 : 0);
         if (empty($channel)) {
-            $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->cache);
+            $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
@@ -112,12 +117,12 @@ abstract class Authority {
         }
 
         if (empty($channel)) {
-            $this->logcat('error', 'Authority::checkChannel(412 无效的频道信息)');
+            $this->logcat('error', 'Authority::checkChannel(412 无效的频道信息)' . $identifier);
 
             return $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
         }
         if ($channel['status'] != 1) {
-            $this->logcat('error', 'Authority::checkChannel(501 该频道尚未启用)');
+            $this->logcat('error', 'Authority::checkChannel(501 该频道尚未启用)' . $identifier);
 
             return $this->response('', 503, 'Channel information not available', '该频道尚未启用');
         }
@@ -126,7 +131,6 @@ abstract class Authority {
          * @todo 4、检查频道是否需要权限检查：公开页面，无需检查
          */
         if ($channel[AuthInfo::$modifier] == AuthInfo::$public) {
-            // 该页面为公开页面，无需检查
             $this->logcat('info', '公开页面，无需检查：' . $identifier);
 
             return $this->response('', 200);
@@ -288,7 +292,16 @@ abstract class Authority {
      * @return array
      */
     private function internalIgnore(): array {
-        return array_merge($this->getIgnore(), array('/', 'index:index', 'index:index:index', 'portal:*', 'captcha', '404', '502'));
+        return array_merge(
+            $this->getIgnore(), array('/',
+                                      'index:index', 'index:index:index',
+                                      'portal:*', 'portal:index',
+                                      'captcha', 'captcha:index',
+
+                                      "favicon.ico", "rotobs.txt",
+
+                                      '404', '502')
+        );
     }
 
     /**
@@ -297,6 +310,19 @@ abstract class Authority {
      * @return array
      */
     abstract function getIgnore(): array;
+
+    /**
+     * 自定义排除算法，排除当前标识符
+     *
+     * @param string $identifier
+     *
+     * @return bool
+     */
+    protected function has_exclude(string $identifier) {
+        $this->logcat('info', 'Authority::has_exclude(' . $identifier . ')');
+
+        return false;
+    }
 
     /**
      * 验证频道
