@@ -148,64 +148,61 @@
             // registerFilter("output", "compress_html");
             // register_function("autoversion","autoversion");
 
-            // script("jquery-2.2.4.min", "open","https://open.tianfu.ink/libs/jquery/script");
-            // script("jquery-ui.min", "open","https://open.tianfu.ink/libs/jquery/script");
-            // script("jquery.session.min", "open","https://open.tianfu.ink/libs/jquery/script");
-            // script("jquery.cookie", "open", "https://open.tianfu.ink/libs/jquery/script");
-            // script("jquery.bxslider", "open","https://open.tianfu.ink/libs/jquery/script");
-            // script("jquery.simplesidebar", "open","https://open.tianfu.ink/libs/jquery/script");
+            // script("jquery-2.2.4.min", "open","//open.tianfu.ink/libs/jquery/script");
+            // script("jquery-ui.min", "open","//open.tianfu.ink/libs/jquery/script");
+            // script("jquery.session.min", "open","//open.tianfu.ink/libs/jquery/script");
+            // script("jquery.cookie", "open", "//open.tianfu.ink/libs/jquery/script");
+            // script("jquery.bxslider", "open","//open.tianfu.ink/libs/jquery/script");
+            // script("jquery.simplesidebar", "open","//open.tianfu.ink/libs/jquery/script");
             // script("jquery.lazyload.min",,"open","open"lazyload/script");
             // script(lazysizes.min,"open","lazyload/script");
-            style('amazeui', 'open', 'https://open.tianfu.ink/libs/amazeui/style');
+            style('amazeui', 'open', '//open.tianfu.ink/libs/amazeui/style');
 
-            style('weui.min', 'open', 'https://open.tianfu.ink/libs/weui/style');
-            style('jquery-weui.min', 'open', 'https://open.tianfu.ink/libs/weui/style');
+            style('weui.min', 'open', '//open.tianfu.ink/libs/weui/style');
+            style('jquery-weui.min', 'open', '//open.tianfu.ink/libs/weui/style');
 
-            script('weui.min', 'open', 'https://open.tianfu.ink/libs/weui/script');
-            script('jquery-weui.min', 'open', 'https://open.tianfu.ink/libs/weui/script');
-            script('fastclick', 'open', 'https://open.tianfu.ink/libs/weui/script');
+            script('weui.min', 'open', '//open.tianfu.ink/libs/weui/script');
+            script('jquery-weui.min', 'open', '//open.tianfu.ink/libs/weui/script');
+            script('fastclick', 'open', '//open.tianfu.ink/libs/weui/script');
 
-            style('commons', 'open', 'https://open.tianfu.ink/libs/style');
-            style('auto', 'open', 'https://open.tianfu.ink/libs/style');
+            style('commons', 'open', '//open.tianfu.ink/libs/style');
+            style('auto', 'open', '//open.tianfu.ink/libs/style');
 
             $appname = app('http')->getname();
-            style($appname === 'index' ? 'portal' : $appname, 'open', 'https://open.tianfu.ink/libs/style');
+            style($appname === 'index' ? 'portal' : $appname, 'open', '//open.tianfu.ink/libs/style');
             View::assign('appname', $appname);
 
             $this->request->appname = $appname;
 
             style(
                 strtolower($this->request->controller()) === 'index' ? 'portal' : strtolower($this->request->controller()),
-                'open', 'https://open.tianfu.ink/libs/style'
+                'open', '//open.tianfu.ink/libs/style'
             );
 
-            style('account', 'open', 'https://open.tianfu.ink/libs/style');
-            style('console', 'open', 'https://open.tianfu.ink/libs/style');
-            style('navigation-responsive', 'open', 'https://open.tianfu.ink/libs/style');
-            style('header-responsive', 'open', 'https://open.tianfu.ink/libs/style');
+            style('account', 'open', '//open.tianfu.ink/libs/style');
+            style('console', 'open', '//open.tianfu.ink/libs/style');
+            style('navigation-responsive', 'open', '//open.tianfu.ink/libs/style');
+            style('header-responsive', 'open', '//open.tianfu.ink/libs/style');
 
-            style('mark.collapse', 'open', 'https://open.tianfu.ink/libs/collapse/style');
-            script('mark.collapse', 'open', 'https://open.tianfu.ink/libs/collapse/script');
+            style('mark.collapse', 'open', '//open.tianfu.ink/libs/collapse/style');
+            script('mark.collapse', 'open', '//open.tianfu.ink/libs/collapse/script');
 
-            // style("amazeui", "open", "https://open.tianfu.ink/libs/amazeui/style");
-            // style("admin", "open", "https://open.tianfu.ink/libs/amazeui/style");
-            // style("app", "open", "https://open.tianfu.ink/libs/amazeui/style");
+            // style("amazeui", "open", "//open.tianfu.ink/libs/amazeui/style");
+            // style("admin", "open", "//open.tianfu.ink/libs/amazeui/style");
+            // style("app", "open", "//open.tianfu.ink/libs/amazeui/style");
 
-            // script("amazeui.min", "open", "https://open.tianfu.ink/libs/amazeui/script");
-            // script("app", "open", "https://open.tianfu.ink/libs/amazeui/script");
-            // script("iscroll", "open", "https://open.tianfu.ink/libs/amazeui/script");
+            // script("amazeui.min", "open", "//open.tianfu.ink/libs/amazeui/script");
+            // script("app", "open", "//open.tianfu.ink/libs/amazeui/script");
+            // script("iscroll", "open", "//open.tianfu.ink/libs/amazeui/script");
 
-            // style("mark.table", "open", "https://open.tianfu.ink/libs/table/style");
-            // style("mark.form", "open", "https://open.tianfu.ink/libs/validform/style");
-            // script("mark.min", "open", "https://open.tianfu.ink/libs/mark/script");
-            script('mark', 'open', 'https://open.tianfu.ink/libs/mark/script');
-            script("mark.verify", "open", "https://open.tianfu.ink/libs/validform/script");
-            // script("mark.multipicker", "open", "https://open.tianfu.ink/libs/validform/script");
-            // style("mark.treeview", "open", "https://open.tianfu.ink/libs/treeview/style");
-            // script("mark.treeview", "open", "https://open.tianfu.ink/libs/treeview/script");
-
-            // style("font_279187_w2z80q86isb", "open", "https://at.alicdn.com/t");
-            // script("font_279187_w2z80q86isb", "open", "https://at.alicdn.com/t");
+            // style("mark.table", "open", "//open.tianfu.ink/libs/table/style");
+            // style("mark.form", "open", "//open.tianfu.ink/libs/validform/style");
+            // script("mark.min", "open", "//open.tianfu.ink/libs/mark/script");
+            script('mark', 'open', '//open.tianfu.ink/libs/mark/script');
+            script("mark.verify", "open", "//open.tianfu.ink/libs/validform/script");
+            // script("mark.multipicker", "open", "//open.tianfu.ink/libs/validform/script");
+            // style("mark.treeview", "open", "//open.tianfu.ink/libs/treeview/style");
+            // script("mark.treeview", "open", "//open.tianfu.ink/libs/treeview/script");
 
             foreach (Config::get('app.iconfont') as $key => $item) {
                 switch ($item['type']) {
