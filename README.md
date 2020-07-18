@@ -45,6 +45,6 @@
 
 ## 联系我们
 
-- [天府联盟官方网站：www.tianfuunion.com](https://www.tianfuunion.com)
-- [天府授权中心官方网站：auth.tianfu.ink](https://auth.tianfu.ink)
+- [天府联盟官方网站：www.tianfuunion.com](http://www.tianfuunion.com)
+- [天府授权中心官方网站：auth.tianfu.ink](http://auth.tianfu.ink)
 - [天府联盟反馈邮箱：report@tianfuunion.cn](mailto:report@tianfuunion.cn)

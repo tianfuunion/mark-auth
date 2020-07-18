@@ -143,18 +143,22 @@ abstract class Authority {
             if (is_ajax() || is_pjax()) {
                 $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
 
-                return $this->response('', 401, 'Ajax Unauthorized', '请求要求用户的身份认证', 'json');
+                return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
             }
 
-            if (is_get() || Request::isGet()) {
-                // $response = Authorize::request(true);
-                $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
+            if ((is_get() || Request::isGet())) {
+                if (!Request::has('code', 'get', true)) {
+                    // $response = Authorize::request(true);
+                    $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
-                return $this->response($url, 302, 'Unauthorized', '登录请求');
+                    return $this->response($url, 302, 'Unauthorized', '登录请求');
+                } else {
+                    // @todo 获取到code之后，请使用本地请求，用户登录数据
+                }
             }
             $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
 
-            return $this->response('', 401, 'Unauthorized', '请求要求用户的身份认证');
+            return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
         }
 
         $this->session->set('expiretime', time() + (int)round(abs($this->expire)));
