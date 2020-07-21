@@ -21,12 +21,11 @@ final class AuthInfo {
 
     public static $default  = 'default';
     public static $public   = 'public';
-    public static $proteced  = 'proteced';
+    public static $proteced = 'proteced';
     public static $private  = 'private';
     public static $final    = 'final';
     public static $static   = 'static';
     public static $abstract = 'abstract';
     public static $system   = 'system';
-
 
 }

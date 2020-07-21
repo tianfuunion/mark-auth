@@ -6,5 +6,4 @@ namespace mark\auth\entity;
 
 final class RoleInfo {
 
-
 }

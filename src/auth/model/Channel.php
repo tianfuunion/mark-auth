@@ -178,7 +178,7 @@ class Channel {
                             ->find();
 
                 if (!empty($result)) {
-                    if ($cache) {
+                    if ($cache == 1) {
                         // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
                     } else {
                         // Cache::delete($cacheKey);

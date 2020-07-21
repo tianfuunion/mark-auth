@@ -4,14 +4,18 @@ declare (strict_types=1);
 
 namespace mark\auth\middleware;
 
+use app\account\model\User;
+
 use think\facade\Config;
 use think\facade\Request;
+use think\facade\Log;
+use think\response\Redirect;
 
 use mark\auth\Authorize;
 use mark\auth\entity\AuthInfo;
 use mark\auth\model\Channel;
-
 use mark\system\Os;
+
 use Psr\SimpleCache\CacheInterface;
 
 /**
@@ -83,7 +87,7 @@ abstract class Authority {
             $this->logcat('info', '自定义排除算法：' . $identifier);
 
             return $this->response('', 200, '', '', 'json');
-        };
+        }
 
         /**
          * @todo 排除自定义标识符：存在Bug，以下情况可能会排除
@@ -121,7 +125,7 @@ abstract class Authority {
 
             return $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
         }
-        if ($channel['status'] != 1) {
+        if (!isset($channel['status']) || $channel['status'] != 1) {
             $this->logcat('error', 'Authority::checkChannel(501 该频道尚未启用)' . $identifier);
 
             return $this->response('', 503, 'Channel information not available', '该频道尚未启用');
@@ -130,7 +134,7 @@ abstract class Authority {
         /**
          * @todo 4、检查频道是否需要权限检查：公开页面，无需检查
          */
-        if ($channel[AuthInfo::$modifier] == AuthInfo::$public) {
+        if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$public) {
             $this->logcat('info', '公开页面，无需检查：' . $identifier);
 
             return $this->response('', 200);
@@ -146,19 +150,41 @@ abstract class Authority {
                 return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
             }
 
-            if ((is_get() || Request::isGet())) {
-                if (!Request::has('code', 'get', true)) {
-                    // $response = Authorize::request(true);
-                    $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
+            if (!(is_get() || Request::isGet())) {
 
-                    return $this->response($url, 302, 'Unauthorized', '登录请求');
-                } else {
-                    // @todo 获取到code之后，请使用本地请求，用户登录数据
-                }
+                $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
+
+                return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
             }
-            $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
 
-            return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
+            $result = Authorize::dispenser(null, 'snsapi_userinfo');
+
+            if ($result instanceof Redirect) {
+                return $result;
+            } elseif ($result && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                Log::debug(
+                    'Authority::handler(dispenser)'
+                    . json_encode($result, JSON_UNESCAPED_UNICODE)
+                    . ' Param:' . json_encode(Request::param(), JSON_UNESCAPED_UNICODE)
+                );
+                // @todo 此处获取到微信UserInfo，请使用本地请求，用户登录数据
+                $user = User::weChatAuth($result);
+            } elseif (!empty($result) && is_array($result) && isset($result['uuid'])) {
+                Log::debug(
+                    'Authority::handler(dispenser)'
+                    . json_encode($result, JSON_UNESCAPED_UNICODE)
+                    . ' Param:' . json_encode(Request::param(), JSON_UNESCAPED_UNICODE)
+                );
+                // @todo 临时办法,解决方案为直接将获取到的UserInfo存储到Session中
+                $user = User::loginAgent(array('uid' => $result['uuid']));
+            } elseif (!Request::has('code', 'get', true)) {
+                // $response = Authorize::request(true);
+                $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
+
+                return $this->response($url, 302, 'Unauthorized', '登录请求');
+            } else {
+                Log::debug('Authority::handler(Request::Param)' . json_encode(Request::param()));
+            }
         }
 
         $this->session->set('expiretime', time() + (int)round(abs($this->expire)));

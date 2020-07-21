@@ -35,9 +35,6 @@ final class UserInfo {
 
     /**
      * @return array|\think\Model|null
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function find() {
         if (empty($this->where)) {
@@ -53,9 +50,6 @@ final class UserInfo {
 
     /**
      * @return array
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function select() {
         if (empty($this->where)) {

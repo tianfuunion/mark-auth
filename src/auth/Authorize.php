@@ -37,17 +37,22 @@ class Authorize {
     }
 
     /**
+     * @var \mark\auth\Client
+     */
+    public static $client;
+
+    /**
      * 账号权限验证
      * 1、权限级别｛1登录、2会员、3管理员等｝
      *
      * @param null   $type
      * @param string $scope
-     *
      * @param bool   $request
      *
-     * @return array|bool|mixed
+     * @return array|bool|false|mixed|string|\think\response\Redirect
      */
     public static function dispenser($type = null, $scope = '', $request = true) {
+        // @todo 此处的校验可取消
         if (self::isLogin() && $request) {
             // 确保设置的有效期为正整数
             Session::set(self::$expiretime, time() + (int)round(abs(Config::get('auth.expire', 1440))));
@@ -55,56 +60,17 @@ class Authorize {
             return true;
         }
 
-        $level = $type == null ? Config::get('auth.level', 'slave') : $type;
-        switch ($level) {
-            case 'master':
-                // 当前节点为主节点（账户节点）
-                $Handle = new Server(new self($scope));
-                break;
-            case 'slave':
-                // 当前节点为从节点（应用节点）
-                $Handle = new Client(new self($scope));
-                break;
-            case 'cross':
-                // 当前节点为应用节点，并且跨域
-                $Handle = new Client(new self($scope));
-                break;
-            default:
-                $Handle = new Client(new self($scope));
-                break;
-        }
+        self::$client = $Handle = new Client(new self($scope), $type ?? Config::get('auth.level', 'slave'));
 
         return $Handle->request();
     }
 
-    /**
-     * 用户授权校验并请求
-     *
-     * @param string $appid
-     * @param string $redirect_uri
-     * @param string $response_type
-     * @param string $scope
-     * @param string $access_type
-     * @param string $state
-     *
-     * @return mixed
-     */
-    public static function authentication(
-        string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'snsapi_base', $access_type = 'offline',
-        string $state = ''
-    ) {
-        $url = Config('auth.host') . '/auth.php/authorize/choice'
-        // $url = Config::get('auth.host') . '/auth.php/oauth2/authorize'
-        . '?appid=' . $appid
-        . '&redirect_uri=' . urlencode(!empty($redirect_uri) ? $redirect_uri : Request::url(true))
-        . '&response_type=' . $response_type
-        . '&scope=' . $scope
-        . '&access_type=' . $access_type
-        . '&state=' . !empty($state) ? $state : md5(uniqid((string)time(), true));
+    public static function getClient($type = null, $scope = '') {
+        if (empty(self::$client) || !self::$client instanceof Client) {
+            self::$client = new Client(new self($scope), $type ?? Config::get('auth.level', 'slave'));
+        }
 
-        header('Location:' . $url);
-
-        return redirect($url);
+        return self::$client;
     }
 
     /**

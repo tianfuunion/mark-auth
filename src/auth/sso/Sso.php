@@ -13,9 +13,12 @@ abstract class Sso {
     /**@var Curl */
     protected $curl;
 
-    public function __construct(Authorize $auth) {
+    protected $level;
+
+    public function __construct(Authorize $auth, $level = null) {
         $this->auth = $auth;
         $this->curl = Curl::getInstance();
+        $this->level = $level;
     }
 
     abstract public function request();
