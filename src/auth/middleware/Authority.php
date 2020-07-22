@@ -183,7 +183,7 @@ abstract class Authority {
                 return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
             }
 
-            $result = Authorize::dispenser(null, 'snsapi_userinfo');
+            $result = Authorize::dispenser(null, 'auth_union');
 
             if ($result instanceof Redirect) {
                 return $result;
@@ -229,11 +229,10 @@ abstract class Authority {
                     . '&poolid=' . Config::get('auth.poolid')
                     . '&redirect_uri=' . urlencode(Request::url(true))
                     . '&response_type=code'
-                    // . '&scope=auth_base'
-                    // . '&scope=auth_userinfo'
                     . '&scope=auth_union'
                     . '&access_type=offline'
-                    . '&state=' . md5(uniqid((string)time(), true));
+                    . '&state=' . md5(uniqid((string)time(), true))
+                    . '#auth_redirect';
 
                 // TODO：临时请求
                 return $this->response($url, 302, 'Unauthorized', '登录请求');

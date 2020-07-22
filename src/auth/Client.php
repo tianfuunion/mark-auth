@@ -65,7 +65,7 @@ class Client extends Sso {
         }
 
         //2、第二步：通过code换取网页授权access_token
-        $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.secret'), Request::get('code'));
+        $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.appsecret'), Request::get('code'));
 
         if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
             return false;
@@ -94,20 +94,25 @@ class Client extends Sso {
      * @param string $appid         公众号的唯一标识
      * @param string $redirect_uri  授权后重定向的回调链接地址， 请使用 urlEncode 对链接进行处理
      * @param string $response_type 返回类型，请填写code
-     * @param string $scope         应用授权作用域，snsapi_base （不弹出授权页面，直接跳转，只能获取用户openid），snsapi_userinfo （弹出授权页面，可通过openid拿到昵称、性别、所在地。
+     * @param string $scope         应用授权作用域，
+     *                              auth_base （不弹出授权页面，直接跳转，只能获取用户openid），
+     *                              auth_userinfo （弹出授权页面，可通过openid拿到昵称、性别、所在地。
+     *                              auth_union (弹出授权页面，可通过OpenID获取到用户包括角色，群组在内的信息)
+     *
      *                              并且， 即使在未关注的情况下，只要用户授权，也能获取其信息 ）
      * @param string $state         重定向后会带上state参数，开发者可以填写a-zA-Z0-9的参数值，最多128字节
      *
      * @return mixed
      * @link         https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#0
      */
-    public function getCode(string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'snsapi_base', string $state = '') {
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink') . '/auth.php/oauth2/authorize?'
-            . 'appid=' . $appid
+    public function getCode(string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'auth_base', string $state = '') {
+        $url = Config::get('auth.host', 'https://auth.tianfu.ink') . '/auth.php/oauth2/authorize'
+            . '?appid=' . $appid
             . '&redirect_uri=' . urlencode($redirect_uri)
             . '&response_type=' . $response_type
             . '&scope=' . $scope
-            . '&state=' . $state
+            . '&state=' . $state ?? md5(uniqid((string)time(), true))
+            . '&view=authorize'
             . '#auth_redirect';
 
         header('Location: ' . $url);
