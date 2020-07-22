@@ -21,11 +21,9 @@ use think\db\exception\ModelNotFoundException;
 use think\db\exception\DbException;
 
 use mark\auth\Authorize;
-
-use mark\response\Responsive;
-use mark\system\Os;
-use mark\wechat\Jssdk;
 use mark\auth\middleware\Authority;
+use mark\response\Responsive;
+use app\account\model\User;
 
 /**
  * Class AuthCheck
@@ -216,14 +214,6 @@ class AuthMiddleware extends Authority {
                     break;
             }
         }
-
-        // 获取微信密钥：分享，
-        if (Os::isWeChat() && Config::get('auth.stores.wechat.status', false)) {
-            $jssdk = new Jssdk(Config::get('auth.stores.wechat.appid'), Config::get('auth.stores.wechat.secret'));
-            $signPackage = $jssdk->GetSignPackage();
-            \think\facade\Session::set("wxsign", $signPackage);
-            View::assign("wxsign", $signPackage);
-        }
     }
 
     /**
@@ -231,7 +221,7 @@ class AuthMiddleware extends Authority {
      *
      * @return string
      */
-    public function getIdentifier(): string {
+    protected function getIdentifier(): string {
         return app('http')->getName(true) . ":" . $this->request->controller(true) . ":" . $this->request->action(true);
     }
 
@@ -240,7 +230,7 @@ class AuthMiddleware extends Authority {
      *
      * @return array
      */
-    public function getIgnore(): array {
+    protected function getIgnore(): array {
         return Config::get('auth.ignore', array());
     }
 
@@ -251,7 +241,7 @@ class AuthMiddleware extends Authority {
      *
      * @return bool
      */
-    protected function has_exclude(string $identifier) {
+    protected function has_exclude(string $identifier): bool {
         $this->logcat('info', 'AuthMiddleware::has_exclude(' . $identifier . ')');
 
         if (stripos($identifier, 'captcha') !== false || stripos($identifier, '/') !== false) {
@@ -266,7 +256,7 @@ class AuthMiddleware extends Authority {
      *
      * @return bool
      */
-    public function has_channel(): bool {
+    protected function has_channel(): bool {
         try {
             $channel = Db::name('app_channel')
                          ->field(true)
@@ -291,7 +281,7 @@ class AuthMiddleware extends Authority {
      *
      * @return bool|void
      */
-    public function has_role(): bool {
+    protected function has_role(): bool {
         return $this->session->has("union.role");
     }
 
@@ -300,7 +290,7 @@ class AuthMiddleware extends Authority {
      *
      * @return bool
      */
-    public function has_union(): bool {
+    protected function has_union(): bool {
         return $this->session->has("union");
     }
 
@@ -309,7 +299,7 @@ class AuthMiddleware extends Authority {
      *
      * @return bool
      */
-    public function has_permission(): bool {
+    protected function has_permission(): bool {
         return $this->session->has("union.permission");
     }
 
@@ -330,14 +320,27 @@ class AuthMiddleware extends Authority {
      *
      * @return \think\response\Redirect|void
      */
-    public function redirect(string $url = '', int $code = 302) {
+    protected function redirect(string $url = '', int $code = 302) {
         return redirect($url, $code);
     }
 
-    public function response($data, $code = 200, $status = '', $msg = '', $type = 'html') {
+    protected function response($data, $code = 200, $status = '', $msg = '', $type = 'html') {
         return array('data' => $data, 'code' => $code, 'status' => $status, 'msg' => $msg, 'type' => $type);
 
         // return Responsive::display($data, $code, $status, $msg, $type);
+    }
+
+    protected function onAuthorized($userInfo): void {
+        Log::debug('AuthMiddleware::onAuthorized(UserInfo)' . json_encode($userInfo, JSON_UNESCAPED_UNICODE));
+
+        if ($userInfo && is_array($userInfo) && isset($userInfo['openid']) && !empty($userInfo['openid'])) {
+            // @todo 此处获取到微信UserInfo，请使用本地请求，用户登录数据
+            $user = User::weChatAuth($userInfo);
+        } elseif (!empty($userInfo) && is_array($userInfo) && isset($userInfo['uuid'])) {
+            // @todo 临时办法,解决方案为直接将获取到的UserInfo存储到Session中
+            $user = User::loginAgent(array('uid' => $userInfo['uuid']));
+        }
+
     }
 
     public function logcat($level, $message, array $context = []): void {
@@ -346,21 +349,11 @@ class AuthMiddleware extends Authority {
         }
     }
 
-    public function cache() {
+    protected function cache() {
         return cache();
     }
 
-    /**
-     * 1、获取当前频道信息
-     * 2、验证当前角色是否拥有该频道的访问权限
-     * 3、
-     *
-     */
-    public function verify(): void {
-
-    }
-
-    public function onDestroy() {
+    protected function onDestroy() {
 
     }
 

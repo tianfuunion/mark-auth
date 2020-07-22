@@ -319,19 +319,18 @@ class Channel {
                           ->get('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip, 'json')
                           ->toArray();
 
-            $os = Os::getInfo();
-            $remark = $os['os'] . " " . $os['brand'] . " " . $os['model'] . " " . implode("_", $os["browser"]) . " " . $os['ipvs'] . " ";
+            $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
 
             if (!empty($result)) {
                 if ($result['code'] == 0) {
                     $remark .= implode('_', $result['data']) . " " . $ip;
                 } else {
-                    $this->authority->logcat('error', 'IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                    $this->authority->logcat('error', 'TaoBao IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
                     return $this->juhe();
                 }
             } else {
-                $this->authority->logcat('error', 'IP Info Error');
+                $this->authority->logcat('error', 'TaoBao IP Info Error');
 
                 return $this->juhe();
             }
@@ -375,17 +374,17 @@ class Channel {
                           ->get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json')
                           ->toArray();
 
-            $os = Os::getInfo();
-            $remark = $os['os'] . " " . $os['brand'] . " " . $os['model'] . " " . implode("_", $os["browser"]) . " " . $os['ipvs'] . " ";
+            // $remark = Os::getOs() . " " . Os::getBrand()['brand'] . " " . Os::getBrand()['model'] . " " . implode("_", Os::getBrowser()) . " " . $ip . " ";
+            $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
 
             if (!empty($result)) {
                 if ($result['resultcode'] == 200) {
                     $remark .= implode('_', $result['result']) . " " . $ip;
                 } else {
-                    $this->authority->logcat('error', 'IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                    $this->authority->logcat('error', 'juhe IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
                 }
             } else {
-                $this->authority->logcat('error', 'IP Info Error');
+                $this->authority->logcat('error', 'juhe IP Info Error');
             }
 
             $user = Db::name('user')
@@ -393,9 +392,7 @@ class Channel {
                       ->where('uid', '=', 12)
                       ->find();
 
-            $this->authority->logcat(
-                'error', 'Channel::Runevent（Channel：运行预警：无效频道）' . json_encode(Request::server(), JSON_UNESCAPED_UNICODE)
-            );
+            $this->authority->logcat('error', 'Channel::Runevent（Channel：运行预警：无效频道）' . json_encode(Request::server(), JSON_UNESCAPED_UNICODE));
 
             return Notice::runevent(
                 $user['wxid'],

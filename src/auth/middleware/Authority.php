@@ -4,14 +4,13 @@ declare (strict_types=1);
 
 namespace mark\auth\middleware;
 
-use app\account\model\User;
-
 use think\facade\Config;
 use think\facade\Request;
 use think\facade\Log;
 use think\response\Redirect;
 
 use mark\auth\Authorize;
+use mark\auth\Client;
 use mark\auth\entity\AuthInfo;
 use mark\auth\model\Channel;
 use mark\system\Os;
@@ -42,32 +41,56 @@ abstract class Authority {
         $this->channel = new Channel($this);
     }
 
-    final public function setAppId($appid): void {
+    protected final function setAppId($appid): void {
         $this->appid = $appid;
     }
 
-    final public function setPoolId($poolid): void {
+    protected final function setPoolId($poolid): void {
         $this->poolid = $poolid;
     }
 
-    final public function setDebug($debug): void {
+    protected final function setDebug($debug): void {
         $this->debug = $debug;
     }
 
-    final public function setCache(CacheInterface $cache): void {
+    protected final function setCache(CacheInterface $cache): void {
         $this->cache = $cache;
     }
 
-    final public function setExpire($expire): void {
+    protected final function setExpire($expire): void {
         $this->expire = $expire;
     }
 
     /**
-     * 处理器
+     * 权限验证分发器
+     * 1、权限级别｛1登录、2会员、3管理员等｝
+     *
+     * @param null   $type
+     * @param string $scope
+     * @param bool   $request
+     *
+     * @return array|bool|false|mixed|string|\think\response\Redirect
+     */
+    protected final function dispenser($type = null, $scope = '', $request = true) {
+        // 初始化
+        $this->initialize();
+
+        // @todo 此处的校验可取消
+        if (!Authorize::isLogin() && $request) {
+            $Handle = new Client(new Authorize($scope), $type ?? Config::get('auth.level', 'slave'));
+
+            return $Handle->request();
+        }
+
+        return $this->response('', 200);
+    }
+
+    /**
+     * 权限验证处理器
      *
      * @return mixed
      */
-    final protected function handler() {
+    protected final function handler() {
         // 初始化
         $this->initialize();
 
@@ -150,8 +173,11 @@ abstract class Authority {
                 return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
             }
 
-            if (!(is_get() || Request::isGet())) {
+            if (is_get()) {
 
+            } elseif (Request::isGet()) {
+
+            } else {
                 $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
 
                 return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
@@ -162,21 +188,9 @@ abstract class Authority {
             if ($result instanceof Redirect) {
                 return $result;
             } elseif ($result && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                Log::debug(
-                    'Authority::handler(dispenser)'
-                    . json_encode($result, JSON_UNESCAPED_UNICODE)
-                    . ' Param:' . json_encode(Request::param(), JSON_UNESCAPED_UNICODE)
-                );
-                // @todo 此处获取到微信UserInfo，请使用本地请求，用户登录数据
-                $user = User::weChatAuth($result);
+                $this->onAuthorized($result);
             } elseif (!empty($result) && is_array($result) && isset($result['uuid'])) {
-                Log::debug(
-                    'Authority::handler(dispenser)'
-                    . json_encode($result, JSON_UNESCAPED_UNICODE)
-                    . ' Param:' . json_encode(Request::param(), JSON_UNESCAPED_UNICODE)
-                );
-                // @todo 临时办法,解决方案为直接将获取到的UserInfo存储到Session中
-                $user = User::loginAgent(array('uid' => $result['uuid']));
+                $this->onAuthorized($result);
             } elseif (!Request::has('code', 'get', true)) {
                 // $response = Authorize::request(true);
                 $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
@@ -314,7 +328,7 @@ abstract class Authority {
      *
      * @return string
      */
-    abstract function getIdentifier(): string;
+    protected abstract function getIdentifier(): string;
 
     /**
      * 获取内部排除项
@@ -339,7 +353,7 @@ abstract class Authority {
      *
      * @return array
      */
-    abstract function getIgnore(): array;
+    protected abstract function getIgnore(): array;
 
     /**
      * 自定义排除算法，排除当前标识符
@@ -348,7 +362,7 @@ abstract class Authority {
      *
      * @return bool
      */
-    protected function has_exclude(string $identifier) {
+    protected function has_exclude(string $identifier): bool {
         $this->logcat('info', 'Authority::has_exclude(' . $identifier . ')');
 
         return false;
@@ -359,28 +373,28 @@ abstract class Authority {
      *
      * @return bool
      */
-    abstract function has_channel(): bool;
+    protected abstract function has_channel(): bool;
 
     /**
      *验证角色
      *
      * @return bool
      */
-    abstract function has_role(): bool;
+    protected abstract function has_role(): bool;
 
     /**
      * 验证联合授权
      *
      * @return bool
      */
-    abstract function has_union(): bool;
+    protected abstract function has_union(): bool;
 
     /**
      * 验证权限
      *
      * @return bool
      */
-    abstract function has_permission(): bool;
+    protected abstract function has_permission(): bool;
 
     /**
      * 请求重定向
@@ -389,7 +403,14 @@ abstract class Authority {
      * @param int    $code 状态码
      *
      */
-    abstract function redirect(string $url = '', int $code = 302);
+    protected abstract function redirect(string $url = '', int $code = 302);
+
+    /**
+     * OAuth2 获取到用户信息后，由实现类存储
+     *
+     * @param $userInfo
+     */
+    protected abstract function onAuthorized($userInfo): void;
 
     /**
      * 响应输出
@@ -402,23 +423,16 @@ abstract class Authority {
      *
      * @return mixed
      */
-    abstract function response($data, $code = 200, $status = '', $msg = '', $type = 'json');
+    protected abstract function response($data, $code = 200, $status = '', $msg = '', $type = 'json');
 
     /**
+     * 自定义实现日志类
+     *
      * @param       $level
      * @param       $message
      * @param array $context
      */
     public function logcat($level, $message, array $context = []): void {
-    }
-
-    /**
-     * 1、获取当前频道信息
-     * 2、验证当前角色是否拥有该频道的访问权限
-     * 3、
-     */
-    public function verify(): void {
-
     }
 
 }
