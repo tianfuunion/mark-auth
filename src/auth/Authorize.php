@@ -64,6 +64,7 @@ final class Authorize {
      * @return array|bool|false|mixed|string|\think\response\Redirect
      */
     public static function dispenser($level = 'slave', $scope = '') {
+
         if ($level == 'master' && $scope != 'auth_union') {
             if (Os::isWeChat() && Config('auth.stores.wechat.status')) {
                 $sso = new WeChat(Authorize::getInstance(), $level);

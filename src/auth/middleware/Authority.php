@@ -6,7 +6,6 @@ namespace mark\auth\middleware;
 
 use think\facade\Config;
 use think\facade\Request;
-use think\facade\Log;
 use think\response\Redirect;
 
 use mark\auth\Authorize;
@@ -125,16 +124,16 @@ abstract class Authority {
          * @todo 3、管理员或测试员 不检查频道状态
          */
         if (Authorize::isAdmin() || Authorize::isTesting()) {
-            $this->logcat('debug', 'Authority::Check(Super Manager has Channel privileges)' . $identifier);
+            $this->logcat('debug', 'Authority::handler(Check Super Manager has Channel privileges)' . $identifier);
         }
 
         if (empty($channel)) {
-            $this->logcat('error', 'Authority::checkChannel(412 无效的频道信息)' . $identifier);
+            $this->logcat('error', 'Authority::handler(checkChannel 412 无效的频道信息)' . $identifier);
 
             return $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
         }
         if (!isset($channel['status']) || $channel['status'] != 1) {
-            $this->logcat('error', 'Authority::checkChannel(501 该频道尚未启用)' . $identifier);
+            $this->logcat('error', 'Authority::handler(checkChannel 501 该频道尚未启用)' . $identifier);
 
             return $this->response('', 503, 'Channel information not available', '该频道尚未启用');
         }
@@ -153,7 +152,7 @@ abstract class Authority {
          */
         if (!Authorize::isLogin()) {
             if (is_ajax() || is_pjax()) {
-                $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
+                $this->logcat('error', 'Authority::handler(ajax checkChannel 401 身份认证)');
 
                 return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
             }
@@ -163,26 +162,29 @@ abstract class Authority {
             } elseif (Request::isGet()) {
 
             } else {
-                $this->logcat('error', 'Authority::checkChannel(401 身份认证)');
+                $this->logcat('error', 'Authority::handler(checkChannel 401 身份认证)');
 
                 return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
             }
+
             if (Config::get('auth.level', 'slave') == 'master') {
+                $this->logcat('debug', 'Authority::Redirect(Unauthorized 302 登录请求)');
                 // $response = Authorize::request(true);
                 $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
             } else {
                 $result = Authorize::dispenser(Config::get('auth.level', 'slave'));
-
                 if ($result instanceof Redirect) {
+                    $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
+
                     return $result;
                 } elseif ($result && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
                     $this->onAuthorized($result);
                 } elseif (!empty($result) && is_array($result) && isset($result['uuid'])) {
                     $this->onAuthorized($result);
                 } else {
-                    Log::debug('Authority::handler(Request::Param)' . json_encode(Request::param()));
+                    $this->logcat('debug', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
                 }
             }
         }

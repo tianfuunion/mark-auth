@@ -79,11 +79,6 @@ class AuthMiddleware extends Authority {
         /** @var Response $response */
         // $response = $next($request);
 
-        if (!Authorize::isAdmin()) {
-            // Log::info('AuthMiddleware::handle(Skip administrator and tester)' . $this->getIdentifier());
-            // return $next($request);
-        }
-
         /**
          * @todo 排除验证码,临时办法
          */
@@ -93,12 +88,12 @@ class AuthMiddleware extends Authority {
 
         $result = parent::handler();
         if ($result instanceof Response) {
-            Log::debug('AuthMiddleware::handle（Response Redirect）' . $this->getIdentifier());
+            $this->logcat('debug', 'AuthMiddleware::handle（Response Redirect）' . $this->getIdentifier());
 
             return $result;
         }
         if (is_array($result) && !empty($result['code'])) {
-            Log::debug('AuthMiddleware::handler(' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
+            $this->logcat('debug', 'AuthMiddleware::handler(' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
             switch ($result["code"]) {
                 case 200:
@@ -131,7 +126,7 @@ class AuthMiddleware extends Authority {
                     break;
             }
         }
-        Log::error('AuthMiddleware::handler(Not Code ' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        $this->logcat('error', 'AuthMiddleware::handler(Not Code ' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
         return $next($request);
     }
@@ -327,11 +322,10 @@ class AuthMiddleware extends Authority {
     protected function response($data, $code = 200, $status = '', $msg = '', $type = 'html') {
         // return Responsive::display($data, $code, $status, $msg, $type);
         return array('data' => $data, 'code' => $code, 'status' => $status, 'msg' => $msg, 'type' => $type);
-
     }
 
     protected function onAuthorized($userInfo): void {
-        Log::debug('AuthMiddleware::onAuthorized(UserInfo)' . json_encode($userInfo, JSON_UNESCAPED_UNICODE));
+        $this->logcat('debug', 'AuthMiddleware::onAuthorized(UserInfo)' . json_encode($userInfo, JSON_UNESCAPED_UNICODE));
 
         if ($userInfo && is_array($userInfo) && isset($userInfo['openid']) && !empty($userInfo['openid'])) {
             // @todo 此处获取到微信UserInfo，请使用本地请求，用户登录数据
@@ -344,6 +338,9 @@ class AuthMiddleware extends Authority {
     }
 
     public function logcat($level, $message, array $context = []): void {
+        if ($this->app->isDebug() && Authorize::isAdmin() && Authorize::isUnion() && Authorize::isTesting()) {
+
+        }
         if ($this->app->isDebug()) {
             Log::log($level, $message, $context);
         }
@@ -358,41 +355,40 @@ class AuthMiddleware extends Authority {
     }
 
     public function end(Response $response) {
-        if (app()->isDebug() && Authorize::isAdmin() && Authorize::isUnion() && Authorize::isTesting()) {
-            Log::debug(
-                'AuthMiddleware:'
-                . "\nFile：" . __FILE__
-                . "\nDir：" . __DIR__
-                . "\nNameSpace：" . __NAMESPACE__
-                . "\nClass：" . __CLASS__
-                . "\nMethod：" . __METHOD__
-                . "\nFunction：" . __FUNCTION__
-                . "\nLine：" . __LINE__
-                . "\nTrait：" . __TRAIT__
-                . "\nisMobile：" . $this->request->isMobile()
-                . "\nAuth.AppID:" . Config::get('auth.appid')
-                . "\nUnion.AppID:" . $this->session->get('union.appid')
-                . "\nUnionID:" . $this->session->get('union.unionid')
-                . "\nRoldID:" . $this->session->get('union.roleid')
-                . "\nUUID:" . $this->session->get('union.uid')
-                . "\nStatus:" . $this->session->get('union.status')
+        $this->logcat(
+            'debug',
+            'AuthMiddleware:'
+            . "\nFile：" . __FILE__
+            . "\nDir：" . __DIR__
+            . "\nNameSpace：" . __NAMESPACE__
+            . "\nClass：" . __CLASS__
+            . "\nMethod：" . __METHOD__
+            . "\nFunction：" . __FUNCTION__
+            . "\nLine：" . __LINE__
+            . "\nTrait：" . __TRAIT__
+            . "\nisMobile：" . $this->request->isMobile()
+            . "\nAuth.AppID:" . Config::get('auth.appid')
+            . "\nUnion.AppID:" . $this->session->get('union.appid')
+            . "\nUnionID:" . $this->session->get('union.unionid')
+            . "\nRoldID:" . $this->session->get('union.roleid')
+            . "\nUUID:" . $this->session->get('union.uid')
+            . "\nStatus:" . $this->session->get('union.status')
 
-                . "\nProject：" . app('http')->getname()
-                . "\ncontroller：" . $this->request->controller()
-                . "\naction：" . $this->request->action()
-                . "\ntype：" . $this->request->type()
-                . "\ntime：" . $this->request->time()
-                . "\nrootDomain：" . $this->request->rootDomain()
-                . "\ndomain：" . $this->request->domain()
-                . "\nip：" . $this->request->ip()
-                . "\nisAjax：" . $this->request->isAjax()
-                . "\nis_ajax：" . is_ajax()
-                . "\nmethod：" . $this->request->method()
-                . "\nurl：" . $this->request->url()
-                . "\nurl：" . $this->request->url(true)
-            );
-        }
-        // $this->session->save();
+            . "\nProject：" . app('http')->getname()
+            . "\ncontroller：" . $this->request->controller()
+            . "\naction：" . $this->request->action()
+            . "\ntype：" . $this->request->type()
+            . "\ntime：" . $this->request->time()
+            . "\nrootDomain：" . $this->request->rootDomain()
+            . "\ndomain：" . $this->request->domain()
+            . "\nip：" . $this->request->ip()
+            . "\nisAjax：" . $this->request->isAjax()
+            . "\nis_ajax：" . is_ajax()
+            . "\nmethod：" . $this->request->method()
+            . "\nurl：" . $this->request->url()
+            . "\nurl：" . $this->request->url(true)
+        );
+
     }
 
 }
