@@ -126,7 +126,7 @@ class Client extends Sso {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
 
-        $token = Curl::getInstance()->get($url)->toArray();
+        $token = Curl::getInstance(true)->get($url)->toArray();
 
         if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
             return $token;

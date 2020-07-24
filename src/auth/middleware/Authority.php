@@ -144,12 +144,12 @@ abstract class Authority {
         }
 
         if (empty($channel)) {
-            $this->logcat('error', 'Authority::handler(checkChannel 412 无效的频道信息)' . $identifier);
+            $this->logcat('error', 'Authority::handler(412 无效的频道信息)' . $identifier);
 
             return $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
         }
         if (!isset($channel['status']) || $channel['status'] != 1) {
-            $this->logcat('error', 'Authority::handler(checkChannel 501 该频道尚未启用)' . $identifier);
+            $this->logcat('error', 'Authority::handler(501 该频道尚未启用)' . $identifier);
 
             return $this->response('', 503, 'Channel information not available', '该频道尚未启用');
         }
@@ -178,7 +178,7 @@ abstract class Authority {
             } elseif (Request::isGet()) {
 
             } else {
-                $this->logcat('error', 'Authority::handler(checkChannel 401 身份认证)');
+                $this->logcat('error', 'Authority::handler(401 身份认证)');
 
                 return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
             }
@@ -220,7 +220,7 @@ abstract class Authority {
         if (!Authorize::isUnion()) {
             // 获取联合授权
             if (is_ajax() || is_pjax()) {
-                $this->logcat('error', 'Authority::checkChannel(异步请求需要授权认证)');
+                $this->logcat('error', 'Authority::handler(异步请求需要授权认证)');
 
                 return $this->response('', 407, 'Asyn Proxy Authentication Required', '异步请求需要授权认证', 'json');
             }
@@ -246,7 +246,7 @@ abstract class Authority {
                 // return Authorize::authentication($this->>appid, Request::url(true));
             }
 
-            $this->logcat('error', 'Authority::checkChannel(Proxy Authentication Required)');
+            $this->logcat('error', 'Authority::handler(Proxy Authentication Required)');
 
             return $this->response('', 407);
             // return AuthUnion::request(true);
@@ -258,48 +258,52 @@ abstract class Authority {
         $access = $this->channel->getAccess($channel['channelid'] ?? 404, $identifier, $this->appid, $this->poolid, $this->session->get('union.roleid', 404));
 
         if (Authorize::isAdmin() || Authorize::isTesting()) {
-            $this->logcat('debug', 'Authority::Check(Super Manager has Method[' . Request::method() . ' ' . __LINE__ . '] privileges)');
+            $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');
 
             return $this->response('', 200);
         }
 
         if (empty($access)) {
-            $this->logcat('error', 'Authority::checkChannel(407 无效的授权信息)');
+            $this->logcat('error', 'Authority::handler(407 无效的授权信息)');
 
             return $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
         }
         if (!isset($access['status']) || $access['status'] != 1) {
-            $this->logcat('error', 'Authority::checkChannel(407 授权信息已被禁用)');
+            $this->logcat('error', 'Authority::handler(407 授权信息已被禁用)');
 
             return $this->response('', 407, 'Authorization information has been disabled', '授权信息已被禁用');
         }
 
         if (!isset($access['allow']) || $access['allow'] != 1) {
-            $this->logcat('debug', 'Authority::Check(402 权限不足)' . json_encode($access, JSON_UNESCAPED_UNICODE));
+            $this->logcat(
+                'debug', 'Authority::handler(402 权限不足)'
+                       . json_encode($channel, JSON_UNESCAPED_UNICODE)
+                       . ' Access' . json_encode($access, JSON_UNESCAPED_UNICODE)
+            );
 
             return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
         }
 
         if (!isset($access['method']) || (stripos($access['method'], 'ajax') === false && is_ajax())) {
-            $this->logcat('error', 'Authority::checkChannel(405 该页面禁止Ajax请求)');
+            $this->logcat('error', 'Authority::handler(405 该页面禁止Ajax请求)');
 
             return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
         }
 
         if (!isset($access['method']) || stripos($access['method'], Request::method()) === false) {
-            $this->logcat('error', 'Authority::checkChannel(405 该页面禁止 ' . Request::method() . ' 方法请求)');
+            $this->logcat('error', 'Authority::handler(405 该页面禁止 ' . Request::method() . ' 方法请求)');
 
             return $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
         }
 
         if (!isset($access['method']) || stripos($access['method'], Request::method()) !== false) {
 
-            $this->logcat('info', 'Authority::Check(Success::' . Request::method() . ')' . Request::url(true));
+            $this->logcat('info', 'Authority::handler(Success::' . Request::method() . ')' . Request::url(true));
 
             return $this->response('', 200);
         }
 
-        $this->logcat('error', 'Authority::checkChannel(406 授权信息异常)');
+        $this->logcat('error', 'Authority::handler(406 授权信息异常)');
 
         return $this->response('', 406, 'Not Acceptable', '授权信息异常');
     }

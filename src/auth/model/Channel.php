@@ -93,7 +93,7 @@ class Channel {
             return $result;
         }
 
-        $curl = Curl::getInstance()
+        $curl = Curl::getInstance(true)
                     ->get(Config::get('auth.host') . '/api.php/ram/channel')
                     ->appendData('appid', $appid)
                     ->appendData('cache', $cache)
@@ -194,12 +194,12 @@ class Channel {
             self::runevent();
         }
 
-        $channel = Curl::getInstance()
+        $channel = Curl::getInstance(true)
                        ->get(Config::get('auth.host') . '/api.php/ram/identifier')
                        ->appendData('poolid', $poolid)
                        ->appendData('appid', $appid)
-                       ->appendData('cache', $cache)
                        ->appendData('identifier', $identifier)
+                       ->appendData('cache', $cache)
                        ->toArray();
 
         if (!empty($channel)) {
@@ -226,9 +226,7 @@ class Channel {
     }
 
     /**
-     * 根据标识符，获取授权信息
-     *
-     * TODO：授权信息查询，存在BUG，无法隔离App
+     * 根据标识符，获取权限信息
      *
      * @param        $channelid
      * @param string $identifier
@@ -236,16 +234,43 @@ class Channel {
      * @param        $poolid
      * @param int    $roleid
      *
-     * @return array|mixed
+     * @return array|mixed|\think\Model
      */
     public function getAccess($channelid, string $identifier, $appid, $poolid, $roleid = 404) {
         $cacheKey = 'channel:access:channelid:' . $channelid . ':appid:' . $appid . ':poolid:' . $poolid . ':roleid:' . $channelid;
 
-        if (Cache::has($cacheKey)) {
-            return Cache::get($cacheKey);
+        if (Config::get('auth.level', 'slave') == 'master') {
+            try {
+                $result = Db::name('access')
+                            ->field(true)
+                    // ->where('appid', '=', $appid)
+                    // ->where('poolid', '=', $poolid)
+                            ->where('channelid', '=', $channelid)
+                            ->where('roleid', '=', $roleid)
+                            ->order('subtime', 'desc')
+                            ->find();
+
+                if (!empty($result)) {
+                    // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                    return $result;
+                } else {
+                    $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)');
+                    // Cache::delete($cacheKey);
+                }
+            } catch (DataNotFoundException $e) {
+                $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $e->getMessage());
+            } catch (ModelNotFoundException $e) {
+                $this->authority->logcat('error', 'Channel::getAccess(ModelNotFoundException)' . $e->getMessage());
+            } catch (DbException $e) {
+                $this->authority->logcat('error', 'Channel::getAccess(DbException)' . $e->getMessage());
+            }
         }
 
-        $access = Curl::getInstance()
+        if (Cache::has($cacheKey)) {
+            // return Cache::get($cacheKey);
+        }
+
+        $access = Curl::getInstance(true)
                       ->get(Config::get('auth.host') . '/api.php/ram/access')
                       ->appendData('identifier', $identifier)
                       ->appendData('channelid', $channelid)
@@ -285,7 +310,7 @@ class Channel {
     private function taobao() {
         try {
             $ip = Os::getIpvs();
-            $result = Curl::getInstance()
+            $result = Curl::getInstance(true)
                           ->get('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip, 'json')
                           ->toArray();
 
@@ -340,7 +365,7 @@ class Channel {
     private function juhe() {
         try {
             $ip = Os::getIpvs();
-            $result = Curl::getInstance()
+            $result = Curl::getInstance(true)
                           ->get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json')
                           ->toArray();
 
