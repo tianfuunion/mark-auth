@@ -34,6 +34,11 @@ abstract class Authority {
 
     protected $channel;
 
+    /**
+     * @var array
+     */
+    protected $config;
+
     public function __construct() {
         $this->logcat('info', 'Authority::construct(' . Os::getAgent() . ')');
         $this->channel = new Channel($this);
@@ -70,6 +75,17 @@ abstract class Authority {
     }
 
     /**
+     * @param array $config
+     *
+     * @return $this
+     */
+    protected final function setConfig(array $config): Authority {
+        $this->config = $config;
+
+        return $this;
+    }
+
+    /**
      * 权限验证处理器
      *
      * @return array|bool|false|mixed|string|\think\response\Redirect
@@ -85,7 +101,7 @@ abstract class Authority {
         $identifier = $this->getInternalIdentifier();
 
         if (empty($identifier)) {
-            $this->logcat('error', '无效的频道标识符：标识符' . $identifier);
+            $this->logcat('error', '无效的频道标识符：' . $identifier);
 
             return $this->response($identifier, 404, '', '无效的频道标识符', 'json');
         }
@@ -179,9 +195,9 @@ abstract class Authority {
                     $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
 
                     return $result;
-                } elseif ($result && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                } elseif (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
                     $this->onAuthorized($result);
-                } elseif (!empty($result) && is_array($result) && isset($result['uuid'])) {
+                } elseif (!empty($result) && is_array($result) && isset($result['uuid']) && !empty($result['uuid'])) {
                     $this->onAuthorized($result);
                 } else {
                     $this->logcat('debug', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
@@ -192,7 +208,7 @@ abstract class Authority {
         /**
          * @todo 6、检查频道是否需要权限检查：默认权限，仅登录即可
          */
-        if ($channel[AuthInfo::$modifier] == AuthInfo::$default) {
+        if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
             $this->logcat('info', '默认权限，仅登录即可：' . $identifier);
 
             return $this->response('', 200);
@@ -216,8 +232,8 @@ abstract class Authority {
 
             } elseif (is_get() || Request::isGet()) {
                 $url = Config('auth.host') . '/auth.php/oauth2/authorize'
-                    . '?appid=' . Config::get('auth.appid')
-                    . '&poolid=' . Config::get('auth.poolid')
+                    . '?appid=' . $this->appid
+                    . '&poolid=' . $this->poolid
                     . '&redirect_uri=' . urlencode(Request::url(true))
                     . '&response_type=code'
                     . '&scope=auth_union'
@@ -227,7 +243,7 @@ abstract class Authority {
 
                 // TODO：临时请求
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
-                // return Authorize::authentication(Config::get('auth.appid'), Request::url(true));
+                // return Authorize::authentication($this->>appid, Request::url(true));
             }
 
             $this->logcat('error', 'Authority::checkChannel(Proxy Authentication Required)');
@@ -239,12 +255,10 @@ abstract class Authority {
         /**
          * @todo 8、校验授权信息
          */
-        $access = $this->channel->getAccess($channel['channelid'], $identifier, $this->session->get('union.roleid', 404));
+        $access = $this->channel->getAccess($channel['channelid'] ?? 404, $identifier, $this->appid, $this->poolid, $this->session->get('union.roleid', 404));
 
         if (Authorize::isAdmin() || Authorize::isTesting()) {
-            $this->logcat(
-                'debug', 'Authority::Check(Super Manager has Method[' . Request::method() . ' ' . __LINE__ . '] privileges)'
-            );
+            $this->logcat('debug', 'Authority::Check(Super Manager has Method[' . Request::method() . ' ' . __LINE__ . '] privileges)');
 
             return $this->response('', 200);
         }
@@ -254,31 +268,31 @@ abstract class Authority {
 
             return $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
         }
-        if ($access['status'] != 1) {
+        if (!isset($access['status']) || $access['status'] != 1) {
             $this->logcat('error', 'Authority::checkChannel(407 授权信息已被禁用)');
 
             return $this->response('', 407, 'Authorization information has been disabled', '授权信息已被禁用');
         }
 
-        if ($access['allow'] != 1) {
-            $this->logcat('debug', 'Authority::Check(402 权限不足)');
+        if (!isset($access['allow']) || $access['allow'] != 1) {
+            $this->logcat('debug', 'Authority::Check(402 权限不足)' . json_encode($access, JSON_UNESCAPED_UNICODE));
 
             return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
         }
 
-        if (is_ajax() && stripos($access['method'], 'ajax') === false) {
+        if (!isset($access['method']) || (stripos($access['method'], 'ajax') === false && is_ajax())) {
             $this->logcat('error', 'Authority::checkChannel(405 该页面禁止Ajax请求)');
 
             return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
         }
 
-        if (stripos($access['method'], Request::method()) === false) {
+        if (!isset($access['method']) || stripos($access['method'], Request::method()) === false) {
             $this->logcat('error', 'Authority::checkChannel(405 该页面禁止 ' . Request::method() . ' 方法请求)');
 
             return $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
         }
 
-        if (stripos($access['method'], Request::method()) !== false) {
+        if (!isset($access['method']) || stripos($access['method'], Request::method()) !== false) {
 
             $this->logcat('info', 'Authority::Check(Success::' . Request::method() . ')' . Request::url(true));
 
@@ -392,6 +406,7 @@ abstract class Authority {
      * @param string $url  重定向地址
      * @param int    $code 状态码
      *
+     * @return mixed
      */
     protected abstract function redirect(string $url = '', int $code = 302);
 

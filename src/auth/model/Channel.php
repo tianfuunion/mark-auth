@@ -132,17 +132,17 @@ class Channel {
      *
      * @return array|mixed|\think\Model|null
      */
-    public function getIdentifier($poolid = 0, $appid = 0, $identifier = '', $cache = 1) {
+    public function getIdentifier($poolid, $appid, $identifier = '', $cache = 1) {
         $cacheKey = 'AuthUnion:identifier';
         $result = array();
 
-        if ($poolid == 0) {
+        if (empty($poolid)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的用户池ID)');
 
             return $result;
         }
-
-        if ($appid == 0) {
+        $cacheKey .= ':poolid:' . $poolid;
+        if (empty($appid)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的AppId)');
 
             return $result;
@@ -156,13 +156,11 @@ class Channel {
         }
 
         $cacheKey .= ':identifier:' . $identifier;
-
-        // TODO：临时关闭缓存
-        // $channel = Cache::get($cacheKey);
-        // $result = $this->authority->cache->get($cacheKey);
-        // if ($cache == 1 && !empty($result)) {
-        // return $channel;
-        // }
+        if (Cache::has($cacheKey)) {
+            // TODO：临时关闭缓存
+            $result = $this->authority->cache->get($cacheKey);
+            // return Cache::get($cacheKey);
+        }
 
         if (Config::get('auth.level', 'slave') == 'master') {
             try {
@@ -234,68 +232,40 @@ class Channel {
      *
      * @param        $channelid
      * @param string $identifier
+     * @param        $appid
+     * @param        $poolid
      * @param int    $roleid
      *
-     * @return array|bool|false|mixed|string|\think\Model|null
+     * @return array|mixed
      */
-    public function getAccess($channelid, string $identifier, $roleid = 404) {
-        $cacheKey = 'Channel:Access:roleid:' . $channelid . ':channelid:' . $channelid;
-        $result = Curl::getInstance()
+    public function getAccess($channelid, string $identifier, $appid, $poolid, $roleid = 404) {
+        $cacheKey = 'channel:access:channelid:' . $channelid . ':appid:' . $appid . ':poolid:' . $poolid . ':roleid:' . $channelid;
+
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $access = Curl::getInstance()
                       ->get(Config::get('auth.host') . '/api.php/ram/access')
                       ->appendData('identifier', $identifier)
                       ->appendData('channelid', $channelid)
+                      ->appendData('appid', $appid)
+                      ->appendData('poolid', $poolid)
                       ->appendData('roleid', $roleid)
                       ->toArray();
 
-        if (!empty($result) && $result['code'] == 200) {
-            return $result['data'];
+        if (!empty($access) && !empty($access['code']) && $access['code'] == 200 && !empty($access['data'])) {
+            Cache::set($cacheKey, $access['data'], Config::get('session.expire', 1440));
+
+            // $this->authority->$cache->set($cacheKey, $access, Config::get('session.expire', 1440));
+            return $access['data'];
+        } else {
+            $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $cacheKey);
+
+            Cache::delete($cacheKey);
         }
 
-        try {
-            $union = Db::name('union')
-                       ->field(true)
-                // ->where("appid", "=", $this->appid)
-                       ->where('uid', '=', !empty($uuid) ? $uuid : 404)
-                       ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
-                       ->order('subtime desc')
-                       ->find();
-            // 查询角色信息 * 可删除
-            $role = Db::name('role')
-                      ->field(true)
-                      ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
-                      ->order('subtime desc')
-                      ->find();
-
-            // 根据当前频道查询可访问的方法
-            $access = Db::name('access')
-                        ->field(true)
-                        ->where('roleid', '=', !empty($roleid) ? $roleid : 404)
-                // ->where("appid", "=", $this->appid)
-                        ->where('channelid', '=', $channelid)
-                        ->order('subtime desc')
-                        ->find();
-            if (!empty($access)) {
-                $result = $access;
-                Cache::set($cacheKey, $access, Config::get('session.expire', 1440));
-                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
-            } else {
-                Cache::delete($cacheKey);
-            }
-        } catch (DataNotFoundException $e) {
-            $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $e->getMessage());
-
-            $result = null;
-        } catch (ModelNotFoundException $e) {
-            $this->authority->logcat('error', 'Channel::getAccess(ModelNotFoundException)' . $e->getMessage());
-
-            $result = null;
-        } catch (DbException $e) {
-            $this->authority->logcat('error', 'Channel::getAccess(DbException)' . $e->getMessage());
-
-            $result = null;
-        }
-
-        return $result;
+        return array();
     }
 
     /**
