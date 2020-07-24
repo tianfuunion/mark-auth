@@ -7,18 +7,30 @@ namespace mark\auth;
 use think\facade\Session;
 use think\facade\Config;
 use think\facade\Request;
+use mark\system\Os;
+use mark\auth\sso\driver\WeChat;
+use mark\auth\sso\driver\AliPay;
+use mark\auth\sso\driver\DingTalk;
 
-class Authorize {
+final class Authorize {
 
-    public        $scope      = 'snsapi_base';
     public static $expiretime = 'expiretime';
     public static $login      = 'login';
     public static $isLogin    = 'isLogin';
     public static $isAdmin    = 'isAdmin';
     public static $isTesting  = 'isTesting';
 
-    public function __construct($scope = '') {
-        $this->scope = $scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base';
+    private function __construct() {
+    }
+
+    private static $instance;
+
+    public static function getInstance() {
+        if (self::$instance == null) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
     }
 
     /**
@@ -42,32 +54,44 @@ class Authorize {
     public static $client;
 
     /**
-     * 账号权限验证
+     * 权限验证分发器
      * 1、权限级别｛1登录、2会员、3管理员等｝
      *
-     * @param null   $type
+     * @param string $level
      * @param string $scope
      * @param bool   $request
      *
      * @return array|bool|false|mixed|string|\think\response\Redirect
      */
-    public static function dispenser($type = null, $scope = '', $request = true) {
-        // @todo 此处的校验可取消
-        if (self::isLogin() && $request) {
-            // 确保设置的有效期为正整数
-            Session::set(self::$expiretime, time() + (int)round(abs(Config::get('auth.expire', 1440))));
+    public static function dispenser($level = 'slave', $scope = '') {
+        if ($level == 'master' && $scope != 'auth_union') {
+            if (Os::isWeChat() && Config('auth.stores.wechat.status')) {
+                $sso = new WeChat(Authorize::getInstance(), $level);
 
-            return true;
+                return $sso->request($scope == 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base');
+            }
+
+            if (Os::isAliPay() && Config('auth.stores.alipay.status')) {
+                $sso = new AliPay(Authorize::getInstance(), $level);
+
+                return $sso->request($scope);
+            }
+
+            if (Os::isDingTalk() && Config('auth.stores.dingtalk.status')) {
+                $sso = new DingTalk(Authorize::getInstance(), $level);
+
+                return $sso->request();
+            }
+
+            return redirect(Config('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true)));
         }
 
-        self::$client = $Handle = new Client(new self($scope), $type ?? Config::get('auth.level', 'slave'));
-
-        return $Handle->request();
+        return self::getClient($level)->request($scope);
     }
 
-    public static function getClient($type = null, $scope = '') {
+    public static function getClient($level = 'slave') {
         if (empty(self::$client) || !self::$client instanceof Client) {
-            self::$client = new Client(new self($scope), $type ?? Config::get('auth.level', 'slave'));
+            self::$client = new Client(Authorize::getInstance(), $level);
         }
 
         return self::$client;

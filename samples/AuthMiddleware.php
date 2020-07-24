@@ -47,7 +47,6 @@ class AuthMiddleware extends Authority {
 
         $this->setPoolId(Config::get('auth.poolid'));
         $this->setAppId(Config::get('auth.appid'));
-
         $this->setDebug($this->app->isDebug());
         // $this->setCache($this->request->param('cache', true));
         // $this->setCache($this->app->cache);
@@ -80,9 +79,8 @@ class AuthMiddleware extends Authority {
         /** @var Response $response */
         // $response = $next($request);
 
-        if (Authorize::isAdmin()) {
+        if (!Authorize::isAdmin()) {
             // Log::info('AuthMiddleware::handle(Skip administrator and tester)' . $this->getIdentifier());
-
             // return $next($request);
         }
 
@@ -202,16 +200,18 @@ class AuthMiddleware extends Authority {
         // style("mark.treeview", "open", "//open.tianfu.ink/libs/treeview/style");
         // script("mark.treeview", "open", "//open.tianfu.ink/libs/treeview/script");
 
-        foreach (Config::get('app.iconfont') as $key => $item) {
-            switch ($item['type']) {
-                case 'style':
-                    style($item['name'], 'open', $item['url']);
-                    break;
-                case 'script':
-                    script($item['name'], 'open', $item['url']);
-                    break;
-                default:
-                    break;
+        if (Config::has('app.iconfont')) {
+            foreach (Config::get('app.iconfont') as $key => $item) {
+                switch ($item['type']) {
+                    case 'style':
+                        style($item['name'], 'open', $item['url']);
+                        break;
+                    case 'script':
+                        script($item['name'], 'open', $item['url']);
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }
@@ -325,9 +325,9 @@ class AuthMiddleware extends Authority {
     }
 
     protected function response($data, $code = 200, $status = '', $msg = '', $type = 'html') {
+        // return Responsive::display($data, $code, $status, $msg, $type);
         return array('data' => $data, 'code' => $code, 'status' => $status, 'msg' => $msg, 'type' => $type);
 
-        // return Responsive::display($data, $code, $status, $msg, $type);
     }
 
     protected function onAuthorized($userInfo): void {

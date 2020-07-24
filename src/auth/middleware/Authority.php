@@ -10,7 +10,6 @@ use think\facade\Log;
 use think\response\Redirect;
 
 use mark\auth\Authorize;
-use mark\auth\Client;
 use mark\auth\entity\AuthInfo;
 use mark\auth\model\Channel;
 use mark\system\Os;
@@ -41,54 +40,40 @@ abstract class Authority {
         $this->channel = new Channel($this);
     }
 
-    protected final function setAppId($appid): void {
+    protected final function setAppId($appid): Authority {
         $this->appid = $appid;
+
+        return $this;
     }
 
-    protected final function setPoolId($poolid): void {
+    protected final function setPoolId($poolid): Authority {
         $this->poolid = $poolid;
+
+        return $this;
     }
 
-    protected final function setDebug($debug): void {
+    protected final function setDebug($debug): Authority {
         $this->debug = $debug;
+
+        return $this;
     }
 
-    protected final function setCache(CacheInterface $cache): void {
+    protected final function setCache(CacheInterface $cache): Authority {
         $this->cache = $cache;
+
+        return $this;
     }
 
-    protected final function setExpire($expire): void {
+    protected final function setExpire($expire): Authority {
         $this->expire = $expire;
-    }
 
-    /**
-     * 权限验证分发器
-     * 1、权限级别｛1登录、2会员、3管理员等｝
-     *
-     * @param null   $type
-     * @param string $scope
-     * @param bool   $request
-     *
-     * @return array|bool|false|mixed|string|\think\response\Redirect
-     */
-    protected final function dispenser($type = null, $scope = '', $request = true) {
-        // 初始化
-        $this->initialize();
-
-        // @todo 此处的校验可取消
-        if (!Authorize::isLogin() && $request) {
-            $Handle = new Client(new Authorize($scope), $type ?? Config::get('auth.level', 'slave'));
-
-            return $Handle->request();
-        }
-
-        return $this->response('', 200);
+        return $this;
     }
 
     /**
      * 权限验证处理器
      *
-     * @return mixed
+     * @return array|bool|false|mixed|string|\think\response\Redirect
      */
     protected final function handler() {
         // 初始化
@@ -182,26 +167,25 @@ abstract class Authority {
 
                 return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
             }
-
-            $result = Authorize::dispenser(null, 'auth_union');
-
-            if ($result instanceof Redirect) {
-                return $result;
-            } elseif ($result && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                $this->onAuthorized($result);
-            } elseif (!empty($result) && is_array($result) && isset($result['uuid'])) {
-                $this->onAuthorized($result);
-            } elseif (!Request::has('code', 'get', true)) {
+            if (Config::get('auth.level', 'slave') == 'master') {
                 // $response = Authorize::request(true);
                 $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
             } else {
-                Log::debug('Authority::handler(Request::Param)' . json_encode(Request::param()));
+                $result = Authorize::dispenser(Config::get('auth.level', 'slave'));
+
+                if ($result instanceof Redirect) {
+                    return $result;
+                } elseif ($result && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                    $this->onAuthorized($result);
+                } elseif (!empty($result) && is_array($result) && isset($result['uuid'])) {
+                    $this->onAuthorized($result);
+                } else {
+                    Log::debug('Authority::handler(Request::Param)' . json_encode(Request::param()));
+                }
             }
         }
-
-        $this->session->set('expiretime', time() + (int)round(abs($this->expire)));
 
         /**
          * @todo 6、检查频道是否需要权限检查：默认权限，仅登录即可
@@ -222,8 +206,13 @@ abstract class Authority {
 
                 return $this->response('', 407, 'Asyn Proxy Authentication Required', '异步请求需要授权认证', 'json');
             }
+            if (Config::get('auth.level', 'slave') == 'master') {
+                //@todo 临时机制，获取授权信息，
+                $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
-            if (is_get() || Request::isGet()) {
+                return $this->response($url, 302, 'Unauthorized', '登录请求');
+
+            } elseif (is_get() || Request::isGet()) {
                 $url = Config('auth.host') . '/auth.php/oauth2/authorize'
                     . '?appid=' . Config::get('auth.appid')
                     . '&poolid=' . Config::get('auth.poolid')

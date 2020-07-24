@@ -9,7 +9,7 @@
     class AliPay extends Sso
     {
 
-        public function request()
+        public function request($scope = '')
         {
             return false;
         }

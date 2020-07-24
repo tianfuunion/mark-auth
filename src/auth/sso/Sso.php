@@ -15,12 +15,23 @@ abstract class Sso {
 
     protected $level;
 
+    /**
+     * Sso constructor.
+     *
+     * @param \mark\auth\Authorize $auth
+     * @param null                 $level
+     */
     public function __construct(Authorize $auth, $level = null) {
         $this->auth = $auth;
-        $this->curl = Curl::getInstance();
         $this->level = $level;
+        $this->curl = Curl::getInstance();
     }
 
-    abstract public function request();
+    /**
+     * @param string $scope
+     *
+     * @return mixed
+     */
+    abstract public function request($scope = '');
 
 }

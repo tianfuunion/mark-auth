@@ -6,6 +6,7 @@ namespace mark\auth\sso\driver;
 
 use mark\auth\sso\Sso;
 use mark\http\Curl;
+
 use think\facade\Config;
 use think\facade\Request;
 use think\response\Redirect;
@@ -22,16 +23,18 @@ class WeChat extends Sso {
      * 用户同意授权，获取code
      * Authorize constructor.
      *
-     * @return array|bool|false|mixed|string
+     * @param string $scope
+     *
+     * @return array|bool|false|mixed|string|\think\response\Redirect
      */
-    public function request() {
+    public function request($scope = 'snsapi_base') {
         // 1、第一步：用户同意授权，获取code
         if (!Request::has("code", "get", true)) {
             $result = $this->getCode(
                 Config::get('auth.stores.wechat.appid'),
                 Request::url(true),
                 Config::get('auth.stores.wechat.response_type', 'code'),
-                $this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
+                $scope == 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
                 Config::get('auth.stores.wechat.state', md5(uniqid((string)time(), true)))
             );
             if ($result instanceof Redirect) {
@@ -47,7 +50,7 @@ class WeChat extends Sso {
             return false;
         }
 
-        if ($this->auth->scope === 'snsapi_base') {
+        if ($scope === 'snsapi_base') {
             return $token;
         }
 

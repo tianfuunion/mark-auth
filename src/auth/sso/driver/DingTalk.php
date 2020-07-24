@@ -9,7 +9,7 @@
     class DingTalk extends Sso
     {
 
-        public function request()
+        public function request($scope = '')
         {
             return false;
         }

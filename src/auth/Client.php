@@ -27,39 +27,19 @@ class Client extends Sso {
      * 当前节点为主要节点，并且未跨域,直接跳转到登录界面，
      * Url应该统一为一个地址，具体显示应该由登录控制器根据参数输出
      *
+     * @param string $scope
+     *
      * @return array|bool|false|mixed|string|\think\response\Redirect
      * @author: Mark Zong
      */
-    public function request() {
-        if ($this->level == 'master') {
-            if (Os::isWeChat() && Config('auth.stores.wechat.status')) {
-                $sso = new WeChat($this->auth);
-
-                return $sso->request();
-            }
-
-            if (Os::isAliPay() && Config('auth.stores.alipay.status')) {
-                $sso = new AliPay($this->auth);
-
-                return $sso->request();
-            }
-
-            if (Os::isDingTalk() && Config('auth.stores.dingtalk.status')) {
-                $sso = new DingTalk($this->auth);
-
-                return $sso->request();
-            }
-
-            return redirect(Config('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true)));
-        }
-
+    public function request($scope = '') {
         // 1、第一步：用户同意授权，获取code
         if (!Request::has("code", "get", true)) {
             return $this->getCode(
                 Config::get('auth.appid'),
                 Request::url(true),
                 'code',
-                $this->auth->scope === 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
+                $scope,
                 md5(uniqid((string)time(), true))
             );
         }
@@ -71,12 +51,12 @@ class Client extends Sso {
             return false;
         }
 
-        if ($this->auth->scope === 'snsapi_base') {
+        if ($scope === 'auth_base') {
             return $token;
         }
 
         // TODO：这里已经获取到OpenId,可检查是否注册过，未注册则再申请UserInfo
-        //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
+        //4、第四步：拉取用户信息(需scope为 auth_userinfo)
         $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], Config::get('lang.default_lang'));
         if (!empty($userInfo) && !empty($userInfo['openid'])) {
             return $userInfo;
@@ -140,8 +120,8 @@ class Client extends Sso {
      * @return array|bool|false|string
      */
     public function getAccessToken(string $appid = '', string $secret = '', string $code = '') {
-        $appid = $appid ?? Config::get('auth.stores.wechat.appid');
-        $secret = $secret ?? Config::get('auth.stores.wechat.secret');
+        $appid = $appid ?? Config::get('auth.appid');
+        $secret = $secret ?? Config::get('auth.appsecret');
         $code = $code ?? Request::get('code');
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
@@ -178,7 +158,7 @@ class Client extends Sso {
      * @link    https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#2
      */
     public function refreshToken(string $appid = '', string $refresh_token = '') {
-        $appid = $appid ?? Config::get('auth.stores.wechat.appid');
+        $appid = $appid ?? Config::get('auth.appid');
         $refresh_token = $refresh_token ?? Request::get('refresh_token');
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/refresh_token?appid=' . $appid . '&grant_type=refresh_token&refresh_token=' . $refresh_token;
@@ -193,7 +173,7 @@ class Client extends Sso {
     }
 
     /**
-     * 4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
+     * 4、第四步：拉取用户信息(需scope为 auth_userinfo)
      *
      * @param string $access_token 网页授权接口调用凭证,注意：此access_token与基础支持的access_token不同
      * @param string $openid       用户的唯一标识
@@ -232,8 +212,11 @@ class Client extends Sso {
      * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#4
      */
     public function verifyToken(string $access_token, string $openid) {
-        $access_token = $access_token ?? $this->getAccessToken()('access_token');
-        $openid = $openid ?? $this->getAccessToken()('openid');
+        $token = $this->getAccessToken();
+
+        $access_token = $access_token ?? $token['access_token'] ?? '';
+        $openid = $openid ?? $token['openid'] ?? '';
+
         $url = Config::get('auth.host', 'https://auth.tianfu.ink') .
             '/auth.php/oauth2/verify_token?access_token=' . $access_token . '&openid=' . $openid;
         $result = Curl::getInstance()->get($url)->toArray();
@@ -254,15 +237,15 @@ class Client extends Sso {
      * @param string $access_type
      * @param string $state
      *
-     * @return mixed
+     * @return \think\response\Redirect
      */
     public static function authentication(
-        string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'snsapi_base', $access_type = 'offline', string $state = ''
+        string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'auth_base', $access_type = 'offline', string $state = ''
     ) {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
         . '/auth.php/authorize/choice'
         . '?appid=' . $appid
-        . '&redirect_uri=' . urlencode(!empty($redirect_uri) ? $redirect_uri : Request::url(true))
+        . '&redirect_uri=' . urlencode($redirect_uri)
         . '&response_type=' . $response_type
         . '&scope=' . $scope
         . '&access_type=' . $access_type

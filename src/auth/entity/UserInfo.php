@@ -71,4 +71,35 @@ final class UserInfo {
         return $this->where;
     }
 
+    /**
+     * 获取加盐后的安全密码(64位)
+     *
+     * @param string $password
+     * @param string $domain
+     *
+     * @return string
+     */
+    public static function security_password(string $password, $host = ''): string {
+        if (empty($host)) {
+            $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        }
+        // 密码加盐字段
+        $salt = strtolower(trim($host));
+        $pwd = trim(strval($password));
+
+        $md5_salt = md5($salt);
+        $md5_pwd = md5($pwd);
+        $hash_pwd = hash("sha256", $pwd);
+
+        $password = hash(
+            "sha256",
+            $md5_salt . "_" .
+            $md5_pwd . "_" .
+            $hash_pwd . "_" .
+            hash("sha256", $md5_salt . "_" . $md5_pwd)
+        );
+
+        return $password;
+    }
+
 }
