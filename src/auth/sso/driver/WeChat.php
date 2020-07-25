@@ -114,7 +114,9 @@ class WeChat extends Sso {
     public function getAccessToken(string $appid, string $secret, string $code) {
         $url = 'https://api.weixin.qq.com/sns/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
 
-        $token = Curl::get($url)->toArray();
+        $token = Curl::getInstance(true)
+                     ->get($url)
+                     ->toArray();
 
         if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
             return $token;
@@ -148,7 +150,9 @@ class WeChat extends Sso {
     public function refreshToken(string $appid, string $refresh_token) {
         $url = 'https://api.weixin.qq.com/sns/oauth2/refresh_token?appid=' . $appid . '&grant_type=refresh_token&refresh_token=' . $refresh_token;
 
-        $token = Curl::get($url)->toArray();
+        $token = Curl::getInstance(true)
+                     ->get($url)
+                     ->toArray();
 
         if (!empty($token) && !empty($token['access_token']) && !empty($token['refresh_token'])) {
             return $token;
@@ -169,7 +173,9 @@ class WeChat extends Sso {
      */
     public function getUserInfo(string $access_token, string $openid, string $lang = 'zh_CN') {
         $url = 'https://api.weixin.qq.com/sns/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
-        $userinfo = Curl::get($url)->toArray();
+        $userinfo = Curl::getInstance(true)
+                        ->get($url)
+                        ->toArray();
 
         if (!empty($userinfo) && !empty($userinfo['openid']) && !empty($userinfo['nickname']) && !empty($userinfo['sex'])) {
             return $userinfo;
@@ -194,7 +200,9 @@ class WeChat extends Sso {
      */
     public function verifyToken(string $access_token, string $openid) {
         $url = 'https://api.weixin.qq.com/sns/auth?access_token=' . $access_token . '&openid=' . $openid;
-        $result = Curl::get($url)->toArray();
+        $result = Curl::getInstance(true)
+                      ->get($url)
+                      ->toArray();
         if (!empty($result['errcode']) && $result['errcode'] == 0) {
             return true;
         }

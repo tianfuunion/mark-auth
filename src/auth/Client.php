@@ -121,7 +121,8 @@ class Client extends Sso {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
 
-        $token = Curl::get($url)->toArray();
+        $token = Curl::getInstance(true)
+                     ->get($url)->toArray();
 
         if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
             return $token;
@@ -158,7 +159,9 @@ class Client extends Sso {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/refresh_token?appid=' . $appid . '&grant_type=refresh_token&refresh_token=' . $refresh_token;
 
-        $token = Curl::get($url)->toArray();
+        $token = Curl::getInstance(true)
+                     ->get($url)
+                     ->toArray();
 
         if (!empty($token) && !empty($token['access_token']) && !empty($token['refresh_token'])) {
             return $token;
@@ -183,7 +186,9 @@ class Client extends Sso {
         $lang = $lang ?? Config::get('lang.default_lang');
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
-        $userinfo = Curl::get($url)->toArray();
+        $userinfo = Curl::getInstance(true)
+                        ->get($url)
+                        ->toArray();
 
         if (!empty($userinfo) && !empty($userinfo['openid']) && !empty($userinfo['nickname']) && !empty($userinfo['sex'])) {
             return $userinfo;
@@ -214,7 +219,9 @@ class Client extends Sso {
 
         $url = Config::get('auth.host', 'https://auth.tianfu.ink') .
             '/auth.php/oauth2/verify_token?access_token=' . $access_token . '&openid=' . $openid;
-        $result = Curl::get($url)->toArray();
+        $result = Curl::getInstance(true)
+                      ->get($url)
+                      ->toArray();
         if (!empty($result) && !isset($result['errcode']) && $result['errcode'] == 0) {
             return true;
         }
