@@ -139,10 +139,11 @@ class Client extends Sso {
 
         $curl = Curl::getInstance(true)
                     ->get($url, 'json');
+        $result = $curl->toArray();
         $code = $curl->getResponseCode();
+
         switch ($code) {
             case 200:
-                $result = $curl->toArray();
                 if (!empty($result) && !empty($result['data']) && !empty($result['code'])) {
                     switch ($result['code']) {
                         case 200:
@@ -162,7 +163,9 @@ class Client extends Sso {
                 Log::error('Client::getAccessToken(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
                 break;
             default:
-                Log::error('Client::getAccessToken(Request Exception)' . $code . ' ' . $curl->getError() . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
+                Log::error(
+                    'Client::getAccessToken(Request Exception)' . $code . ' ' . $curl->getError() . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE)
+                );
                 break;
         }
 
@@ -244,10 +247,11 @@ class Client extends Sso {
         $curl = Curl::getInstance(true)
                     ->get($url, 'json');
 
+        $result = $curl->toArray();
         $code = $curl->getResponseCode();
+
         switch ($code) {
             case 200:
-                $result = $curl->toArray();
                 if (!empty($result) && !empty($result['data']) && !empty($result['code'])) {
                     switch ($result['code']) {
                         case 200:
@@ -269,7 +273,9 @@ class Client extends Sso {
                 Log::error('Client::getUserInfo(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
                 break;
             default:
-                Log::error('Client::getUserInfo(Request Exception)' . $code . ' ' . $curl->getError() . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
+                Log::error(
+                    'Client::getUserInfo(Request Exception)' . $code . ' ' . $curl->getError() . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE)
+                );
                 break;
         }
 
