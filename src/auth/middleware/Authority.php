@@ -229,8 +229,8 @@ abstract class Authority {
                 $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
-
-            } elseif (is_get() || Request::isGet()) {
+            }
+            if (is_get() || Request::isGet()) {
                 $url = Config('auth.host') . '/auth.php/oauth2/authorize'
                     . '?appid=' . $this->appid
                     . '&poolid=' . $this->poolid
