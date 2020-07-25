@@ -12,10 +12,11 @@ use mark\auth\sso\Sso;
 use mark\http\Curl;
 
 /**
- * Class WeChatX
  * 如果用户在微信客户端中访问第三方网页，公众号可以通过微信网页授权机制，来获取用户基本信息，进而实现业务逻辑。
  *
- * @package mark\auth\sso\driver
+ * Class Client
+ *
+ * @package mark\auth
  */
 class Client extends Sso {
 
@@ -44,6 +45,8 @@ class Client extends Sso {
         $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.appsecret'), Request::get('code'));
 
         if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
+            Log::error('Client::request(NOT access_token Or openid)' . json_encode($token, JSON_UNESCAPED_UNICODE));
+
             return false;
         }
 
@@ -57,6 +60,7 @@ class Client extends Sso {
         if (!empty($userInfo) && !empty($userInfo['openid'])) {
             return $userInfo;
         }
+        Log::error('Client::request(false)' . json_encode($token, JSON_UNESCAPED_UNICODE));
 
         return false;
     }
@@ -78,7 +82,7 @@ class Client extends Sso {
      *                              并且， 即使在未关注的情况下，只要用户授权，也能获取其信息 ）
      * @param string $state         重定向后会带上state参数，开发者可以填写a-zA-Z0-9的参数值，最多128字节
      *
-     * @return mixed
+     * @return \think\response\Redirect
      * @link         https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#0
      */
     public function getCode(string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'auth_base', string $state = '') {
@@ -87,10 +91,10 @@ class Client extends Sso {
             . '&redirect_uri=' . urlencode($redirect_uri)
             . '&response_type=' . $response_type
             . '&scope=' . $scope
-            . '&state=' . $state ?? md5(uniqid((string)time(), true))
+            . '&state=' . ($state ?? md5(uniqid((string)time(), true)))
             . '&view=authorize'
             . '#auth_redirect';
-        Log::debug('Client::getCode()' . $url);
+        Log::debug('Client::getCode(Url)' . $url);
 
         header('HTTP/1.1 301 Moved Permanently');
         header('Location: ' . $url);
@@ -115,30 +119,56 @@ class Client extends Sso {
      * @param string $secret
      * @param string $code 用于换取access_token的code，微信提供
      *
-     * @return array|bool|false|string
+     * @return array|mixed
      */
-    public function getAccessToken(string $appid = '', string $secret = '', string $code = '') {
-        $appid = $appid ?? Config::get('auth.appid');
-        $secret = $secret ?? Config::get('auth.appsecret');
-        $code = $code ?? Request::get('code');
+    public function getAccessToken(string $appid, string $secret, string $code) {
+        if (empty($appid)) {
+            $appid = Config::get('auth.appid');
+        }
+        if (empty($secret)) {
+            $secret = Config::get('auth.appsecret');
+        }
+        if (empty($code)) {
+            $code = Request::get('code');
+        }
+
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
 
-        Log::debug('Client::getAccessToken()' . $url);
+        Log::debug('Client::getAccessToken(Url)' . $url);
 
-        $token = Curl::getInstance(true)
-                     ->get($url)
-                     ->toArray();
+        $curl = Curl::getInstance(true)
+                    ->get($url);
+        $code = $curl->getResponseCode();
+        switch ($code) {
+            case 200:
+                $result = $curl->toArray();
+                if (!empty($result) && !empty($result['data']) && !empty($result['code'])) {
+                    switch ($result['code']) {
+                        case 200:
+                            $token = $result['data'];
 
-        if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
-            return $token;
+                            if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
+                                return $token;
+                            }
+
+                            if (empty($token) || isset($token['errcode'])) {
+                                // @todo errcode 可能删除，可用 status code代替
+                                return array();
+                            }
+                            break;
+                    }
+                }
+                Log::error('Client::getAccessToken(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                return array();
+                break;
+            default:
+                Log::error('Client::getAccessToken(Request Exception)' . $code);
+
+                return array();
+                break;
         }
-
-        if (empty($token) || isset($token['errcode'])) {
-            return array();
-        }
-
-        return array();
     }
 
     /**
@@ -159,13 +189,17 @@ class Client extends Sso {
      * @return array|bool|false
      * @link    https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#2
      */
-    public function refreshToken(string $appid = '', string $refresh_token = '') {
-        $appid = $appid ?? Config::get('auth.appid');
-        $refresh_token = $refresh_token ?? Request::get('refresh_token');
+    public function refreshToken(string $appid, string $refresh_token) {
+        if (empty($appid)) {
+            $appid = Config::get('auth.appid');
+        }
+        if (empty($refresh_token)) {
+            $refresh_token = Request::get('refresh_token');
+        }
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/refresh_token?appid=' . $appid . '&grant_type=refresh_token&refresh_token=' . $refresh_token;
 
-        Log::debug('Client::refreshToken()' . $url);
+        Log::debug('Client::refreshToken(Url)' . $url);
 
         $token = Curl::getInstance(true)
                      ->get($url)
@@ -185,31 +219,62 @@ class Client extends Sso {
      * @param string $openid       用户的唯一标识
      * @param string $lang         返回国家地区语言版本，zh_CN 简体，zh_TW 繁体，en 英语
      *
-     * @return array|bool|false|string 微信用户信息数组
+     * @return array|mixed 微信用户信息数组
      * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#3
      */
-    public function getUserInfo(string $access_token = '', string $openid = '', string $lang = 'zh_CN') {
-        $access_token = $access_token ?? $this->getAccessToken()['access_token'];
-        $openid = $openid ?? $this->getAccessToken()['openid'];
-        $lang = $lang ?? Config::get('lang.default_lang');
+    public function getUserInfo(string $access_token, string $openid, string $lang = 'zh_CN') {
+        if (empty($access_token) || empty($openid)) {
+            $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.appsecret'), Request::get('code'));
+
+            if (!empty($token) && !empty($token['access_token'])) {
+                $access_token = $token['access_token'];
+            }
+
+            if (!empty($token) && !empty($token['openid'])) {
+                $openid = $token['openid'];
+            }
+        }
+        if (empty($lang)) {
+            $lang = Config::get('lang.default_lang', 'zh_CN');
+        }
+
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
 
-        Log::debug('Client::getUserInfo()' . $url);
+        Log::debug('Client::getUserInfo(Url)' . $url);
 
-        $userinfo = Curl::getInstance(true)
-                        ->get($url)
-                        ->toArray();
+        $curl = Curl::getInstance(true)
+                    ->get($url);
 
-        if (!empty($userinfo) && !empty($userinfo['openid']) && !empty($userinfo['nickname']) && !empty($userinfo['sex'])) {
-            return $userinfo;
+        $code = $curl->getResponseCode();
+        switch ($code) {
+            case 200:
+                $result = $curl->toArray();
+                if (!empty($result) && !empty($result['data']) && !empty($result['code'])) {
+                    switch ($result['code']) {
+                        case 200:
+                            $userinfo = $result['data'];
+
+                            if (!empty($userinfo) && !empty($userinfo['openid']) && !empty($userinfo['nickname']) && !empty($userinfo['sex'])) {
+                                return $userinfo;
+                            }
+                            if (empty($userinfou) || isset($userinfo['errcode'])) {
+                                // @todo errcode 可能删除，可用 status code代替
+                                return array();
+                            }
+                            break;
+                    }
+                }
+                Log::error('Client::getUserInfo(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                return array();
+                break;
+            default:
+                Log::error('Client::getUserInfo(Request Exception)' . $code);
+
+                return array();
+                break;
         }
-
-        if (empty($userinfou) || isset($userinfo['errcode'])) {
-            return array();
-        }
-
-        return $userinfo;
     }
 
     /**
@@ -223,11 +288,17 @@ class Client extends Sso {
      * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#4
      */
     public function verifyToken(string $access_token, string $openid) {
-        $token = $this->getAccessToken();
+        if (empty($access_token) || empty($openid)) {
+            $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.appsecret'), Request::get('code'));
 
-        $access_token = $access_token ?? $token['access_token'] ?? '';
-        $openid = $openid ?? $token['openid'] ?? '';
+            if (!empty($token) && !empty($token['access_token'])) {
+                $access_token = $token['access_token'];
+            }
 
+            if (!empty($token) && !empty($token['openid'])) {
+                $openid = $token['openid'];
+            }
+        }
         $url = Config::get('auth.host', 'https://auth.tianfu.ink') .
             '/auth.php/oauth2/verify_token?access_token=' . $access_token . '&openid=' . $openid;
         $result = Curl::getInstance(true)

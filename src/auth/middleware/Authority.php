@@ -192,13 +192,19 @@ abstract class Authority {
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
             } else {
                 $result = Authorize::dispenser(Config::get('auth.level', 'slave'),'auth_union');
+                $this->logcat('debug', 'Authority::handler(Authorize::dispenser)'. json_encode($result,JSON_UNESCAPED_UNICODE));
+
                 if ($result instanceof Redirect) {
                     $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
 
                     return $result;
                 } elseif (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                    $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result,JSON_UNESCAPED_UNICODE));
+
                     $this->onAuthorized($result);
                 } elseif (!empty($result) && is_array($result) && isset($result['uuid']) && !empty($result['uuid'])) {
+                    $this->logcat('debug', 'Authority::handler(Union UserInfo)' . json_encode($result,JSON_UNESCAPED_UNICODE));
+
                     $this->onAuthorized($result);
                 } else {
                     $this->logcat('debug', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
