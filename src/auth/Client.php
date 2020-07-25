@@ -6,12 +6,13 @@ namespace mark\auth;
 
 use think\facade\Request;
 use think\facade\Config;
+use think\facade\Log;
 
 use mark\auth\sso\Sso;
 use mark\http\Curl;
 
 /**
- * Class WeChat
+ * Class WeChatX
  * 如果用户在微信客户端中访问第三方网页，公众号可以通过微信网页授权机制，来获取用户基本信息，进而实现业务逻辑。
  *
  * @package mark\auth\sso\driver
@@ -89,7 +90,9 @@ class Client extends Sso {
             . '&state=' . $state ?? md5(uniqid((string)time(), true))
             . '&view=authorize'
             . '#auth_redirect';
+        Log::debug('Client::getCode()' . $url);
 
+        header('HTTP/1.1 301 Moved Permanently');
         header('Location: ' . $url);
 
         return redirect($url);
@@ -121,8 +124,11 @@ class Client extends Sso {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
 
+        Log::debug('Client::getAccessToken()' . $url);
+
         $token = Curl::getInstance(true)
-                     ->get($url)->toArray();
+                     ->get($url)
+                     ->toArray();
 
         if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
             return $token;
@@ -159,6 +165,8 @@ class Client extends Sso {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/refresh_token?appid=' . $appid . '&grant_type=refresh_token&refresh_token=' . $refresh_token;
 
+        Log::debug('Client::refreshToken()' . $url);
+
         $token = Curl::getInstance(true)
                      ->get($url)
                      ->toArray();
@@ -186,6 +194,9 @@ class Client extends Sso {
         $lang = $lang ?? Config::get('lang.default_lang');
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
             . '/auth.php/oauth2/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
+
+        Log::debug('Client::getUserInfo()' . $url);
+
         $userinfo = Curl::getInstance(true)
                         ->get($url)
                         ->toArray();
