@@ -138,7 +138,7 @@ class Client extends Sso {
         Log::debug('Client::getAccessToken(Url)' . $url);
 
         $curl = Curl::getInstance(true)
-                    ->get($url);
+                    ->get($url, 'json');
         $code = $curl->getResponseCode();
         switch ($code) {
             case 200:
@@ -162,7 +162,7 @@ class Client extends Sso {
                 Log::error('Client::getAccessToken(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
                 break;
             default:
-                Log::error('Client::getAccessToken(Request Exception)' . $code . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
+                Log::error('Client::getAccessToken(Request Exception)' . $code . ' ' . $curl->getError() . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
                 break;
         }
 
@@ -242,7 +242,7 @@ class Client extends Sso {
         Log::debug('Client::getUserInfo(Url)' . $url);
 
         $curl = Curl::getInstance(true)
-                    ->get($url);
+                    ->get($url, 'json');
 
         $code = $curl->getResponseCode();
         switch ($code) {
@@ -269,7 +269,7 @@ class Client extends Sso {
                 Log::error('Client::getUserInfo(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
                 break;
             default:
-                Log::error('Client::getUserInfo(Request Exception)' . $code . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
+                Log::error('Client::getUserInfo(Request Exception)' . $code . ' ' . $curl->getError() . ' ' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
                 break;
         }
 
@@ -301,7 +301,7 @@ class Client extends Sso {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink') .
             '/auth.php/oauth2/verify_token?access_token=' . $access_token . '&openid=' . $openid;
         $result = Curl::getInstance(true)
-                      ->get($url)
+                      ->get($url, 'json')
                       ->toArray();
         if (!empty($result) && !isset($result['errcode']) && $result['errcode'] == 0) {
             return true;
