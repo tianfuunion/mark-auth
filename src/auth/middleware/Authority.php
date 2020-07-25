@@ -191,7 +191,7 @@ abstract class Authority {
 
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
             } else {
-                $result = Authorize::dispenser(Config::get('auth.level', 'slave'));
+                $result = Authorize::dispenser(Config::get('auth.level', 'slave'),'auth_union');
                 if ($result instanceof Redirect) {
                     $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
 

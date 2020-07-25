@@ -27,7 +27,7 @@ class Client extends Sso {
      * @return array|bool|false|mixed|string|\think\response\Redirect
      * @author: Mark Zong
      */
-    public function request($scope = '') {
+    public function request($scope = 'auth_base') {
         // 1、第一步：用户同意授权，获取code
         if (!Request::has("code", "get", true)) {
             return $this->getCode(

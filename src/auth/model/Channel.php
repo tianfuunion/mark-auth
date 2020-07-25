@@ -161,13 +161,11 @@ class Channel {
         if (Config::get('auth.level', 'slave') == 'master') {
             try {
                 $result = Db::name('app_channel')
-                            ->table('pro_app app, pro_app_channel channel')
-                            ->field('channel.*, app.appid, app.domain, app.host')
-                            ->where('app.appid = channel.appid')
-                            ->where('app.poolid', '=', $poolid)
-                            ->where('app.appid', '=', $appid)
-                            ->where('channel.identifier', '=', $identifier)
-                            ->order('channel.displayorder asc')
+                            ->field(true)
+                    // ->where('poolid', '=', $poolid)
+                            ->where('appid', '=', $appid)
+                            ->where('identifier', '=', $identifier)
+                            ->order('displayorder')
                             ->cache($this->authority->expire)
                             ->find();
 
@@ -179,6 +177,8 @@ class Channel {
                     }
 
                     return $result;
+                } else {
+                    $this->authority->logcat('error', 'Channel::getIdentifier(Data Not Found)');
                 }
             } catch (DataNotFoundException $e) {
                 $this->authority->logcat('error', 'Channel::getIdentifier(DataNotFoundException)' . $e->getMessage());
