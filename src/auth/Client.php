@@ -160,15 +160,13 @@ class Client extends Sso {
                     }
                 }
                 Log::error('Client::getAccessToken(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                return array();
                 break;
             default:
                 Log::error('Client::getAccessToken(Request Exception)' . $code);
-
-                return array();
                 break;
         }
+
+        return array();
     }
 
     /**
@@ -269,15 +267,13 @@ class Client extends Sso {
                     }
                 }
                 Log::error('Client::getUserInfo(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                return array();
                 break;
             default:
                 Log::error('Client::getUserInfo(Request Exception)' . $code);
-
-                return array();
                 break;
         }
+
+        return array();
     }
 
     /**
