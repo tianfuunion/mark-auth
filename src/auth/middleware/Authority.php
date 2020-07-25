@@ -132,6 +132,7 @@ abstract class Authority {
          */
         $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->debug) ? 1 : 0);
         if (empty($channel)) {
+            $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
             $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));

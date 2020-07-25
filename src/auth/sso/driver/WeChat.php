@@ -47,6 +47,7 @@ class WeChat extends Sso {
         //2、第二步：通过code换取网页授权access_token
         $token = $this->getAccessToken(Config::get('auth.stores.wechat.appid'), Config::get('auth.stores.wechat.secret'), Request::get('code'));
         if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
+
             return false;
         }
 

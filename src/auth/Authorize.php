@@ -81,7 +81,7 @@ final class Authorize {
             if (Os::isDingTalk() && Config('auth.stores.dingtalk.status')) {
                 $sso = new DingTalk(Authorize::getInstance(), $level);
 
-                return $sso->request();
+                return $sso->request($scope);
             }
 
             return redirect(Config('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true)));

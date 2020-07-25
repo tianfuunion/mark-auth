@@ -69,7 +69,7 @@ class Channel {
                     // ->where("app.domain", "=", $this->request->rootdomain())
                             ->where('channel.url', '=', $url)
                             ->order('channel.displayorder asc')
-                            ->cache(false)
+                            ->cache($this->authority->expire)
                             ->find();
 
                 if (!empty($result)) {
@@ -135,26 +135,26 @@ class Channel {
         if (empty($poolid)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的用户池ID)');
 
-            return $result;
+            return array();
         }
         $cacheKey .= ':poolid:' . $poolid;
         if (empty($appid)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的AppId)');
 
-            return $result;
+            return array();
         }
         $cacheKey .= ':appid:' . $appid;
 
         if (empty($identifier)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的频道标识符)');
 
-            return $result;
+            return array();
         }
 
         $cacheKey .= ':identifier:' . $identifier;
         if (Cache::has($cacheKey)) {
             // TODO：临时关闭缓存
-            $result = $this->authority->cache->get($cacheKey);
+            // $result = $this->authority->cache->get($cacheKey);
             // return Cache::get($cacheKey);
         }
 
@@ -168,7 +168,7 @@ class Channel {
                             ->where('app.appid', '=', $appid)
                             ->where('channel.identifier', '=', $identifier)
                             ->order('channel.displayorder asc')
-                            ->cache($cache)
+                            ->cache($this->authority->expire)
                             ->find();
 
                 if (!empty($result)) {
@@ -207,7 +207,7 @@ class Channel {
                 $result = $channel['data'];
             }
         } else {
-            $this->authority->logcat('error', 'Channel::getIdentifier()' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+            $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
         }
 
         if (!empty($result) && $cache) {
