@@ -93,20 +93,15 @@ class Channel {
             return $result;
         }
 
-        $curl = Curl::getInstance(true)
-                    ->get(Config::get('auth.host') . '/api.php/ram/channel')
+        $curl = Curl::get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/channel')
                     ->appendData('appid', $appid)
                     ->appendData('cache', $cache)
                     ->appendData('url', urlencode($url));
 
-        $json = $curl->execute();
-
         $code = $curl->getResponseCode();
 
         if ($code == 200) {
-            if (!empty($json)) {
-                $result = json_decode($json, true);
-            }
+            $result = $curl->toArray();
 
             if (!empty($result) && $cache) {
                 Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
@@ -194,8 +189,7 @@ class Channel {
             self::runevent();
         }
 
-        $channel = Curl::getInstance(true)
-                       ->get(Config::get('auth.host') . '/api.php/ram/identifier')
+        $channel = Curl::get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/identifier')
                        ->appendData('poolid', $poolid)
                        ->appendData('appid', $appid)
                        ->appendData('identifier', $identifier)
@@ -270,8 +264,7 @@ class Channel {
             // return Cache::get($cacheKey);
         }
 
-        $access = Curl::getInstance(true)
-                      ->get(Config::get('auth.host') . '/api.php/ram/access')
+        $access = Curl::get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/access')
                       ->appendData('identifier', $identifier)
                       ->appendData('channelid', $channelid)
                       ->appendData('appid', $appid)
@@ -310,9 +303,7 @@ class Channel {
     private function taobao() {
         try {
             $ip = Os::getIpvs();
-            $result = Curl::getInstance(true)
-                          ->get('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip, 'json')
-                          ->toArray();
+            $result = Curl::get('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip, 'json')->toArray();
 
             $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
 
@@ -365,12 +356,8 @@ class Channel {
     private function juhe() {
         try {
             $ip = Os::getIpvs();
-            $result = Curl::getInstance(true)
-                          ->get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json')
-                          ->toArray();
-
+            $result = Curl::get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json')->toArray();
             $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
-
             if (!empty($result)) {
                 if ($result['resultcode'] == 200) {
                     $remark .= implode('_', $result['result']) . " " . $ip;
