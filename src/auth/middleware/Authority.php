@@ -22,17 +22,17 @@ use Psr\SimpleCache\CacheInterface;
  */
 abstract class Authority {
 
-    protected $appid  = '';
-    protected $poolid = '';
-    protected $debug  = false;
+    public $appid  = '';
+    public $poolid = '';
+    public $debug  = false;
     /**
      * @var CacheInterface
      */
     public $cache;
 
-    protected $expire = 1440;
+    public $expire = 1440;
 
-    protected $channel;
+    public $channel;
 
     /**
      * @var array

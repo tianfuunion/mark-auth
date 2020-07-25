@@ -43,7 +43,7 @@ class Channel {
         $cacheKey = 'AuthUnion:channel';
         $result = array();
         if ($appid == 0) {
-            $appid = Config::get('auth.appid');
+            $appid = $this->authority->appid;
         }
         $cacheKey .= ':appid:' . $appid;
 
@@ -74,7 +74,7 @@ class Channel {
 
                 if (!empty($result)) {
                     if ($cache) {
-                        Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                        Cache::set($cacheKey, $result, $this->authority->expire);
                     } else {
                         Cache::delete($cacheKey);
                     }
@@ -369,7 +369,6 @@ class Channel {
                           ->get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json')
                           ->toArray();
 
-            // $remark = Os::getOs() . " " . Os::getBrand()['brand'] . " " . Os::getBrand()['model'] . " " . implode("_", Os::getBrowser()) . " " . $ip . " ";
             $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
 
             if (!empty($result)) {
