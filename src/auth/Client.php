@@ -147,14 +147,14 @@ class Client extends Sso {
                     switch ($result['code']) {
                         case 200:
                             $token = $result['data'];
-
-                            if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
+                            if (empty($token)) {
+                                Log::error('Client::getAccessToken(Token is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } elseif (empty($token['openid'])) {
+                                Log::error('Client::getAccessToken(Token.openid is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } elseif (empty($token['access_token'])) {
+                                Log::error('Client::getAccessToken(Token.access_token is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } else {
                                 return $token;
-                            }
-
-                            if (empty($token) || isset($token['errcode'])) {
-                                // @todo errcode 可能删除，可用 status code代替
-                                return array();
                             }
                             break;
                     }
@@ -254,13 +254,16 @@ class Client extends Sso {
                     switch ($result['code']) {
                         case 200:
                             $userinfo = $result['data'];
-
-                            if (!empty($userinfo) && !empty($userinfo['openid']) && !empty($userinfo['nickname']) && !empty($userinfo['sex'])) {
+                            if (empty($userinfo)) {
+                                Log::error('Client::getUserInfo(UserInfo is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } elseif (empty($userinfo['openid'])) {
+                                Log::error('Client::getUserInfo(UserInfo.openid is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } elseif (empty($userinfo['nickname'])) {
+                                Log::error('Client::getUserInfo(UserInfo.nickname is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } elseif (empty($userinfo['sex'])) {
+                                Log::error('Client::getUserInfo(UserInfo.sex is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } else {
                                 return $userinfo;
-                            }
-                            if (empty($userinfou) || isset($userinfo['errcode'])) {
-                                // @todo errcode 可能删除，可用 status code代替
-                                return array();
                             }
                             break;
                     }
