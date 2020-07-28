@@ -59,7 +59,6 @@ final class Authorize {
      *
      * @param string $level
      * @param string $scope
-     * @param bool   $request
      *
      * @return array|bool|false|mixed|string|\think\response\Redirect
      */
@@ -109,8 +108,8 @@ final class Authorize {
         return
             Session::get(self::$login, 0) === 1
             && Session::get(self::$isLogin, 0) === 1
-            && Session::get('uid', 0) !== 0
-            && Session::get('gid', 0) !== 0
+            && (Session::get('uuid', 0) !== 0 || Session::get('uid', 0) !== 0)
+            && (Session::get('guid', 0) !== 0 || Session::get('gid', 0) !== 0)
             && !self::isExpire();
     }
 
@@ -122,11 +121,10 @@ final class Authorize {
      */
     public static function isUnion() {
         return self::isLogin()
-            && Session::get('union', '') !== ''
+            && !empty(Session::get('union'))
             && Session::get('union.unionid', 0) !== 0
-            && Session::get('union.uid', 0) !== 0
-            // && Session::get('union.appid', 0) == Config::get('auth.appid', 1)
-            && Session::get('union.poolid', 0) == Config::get('auth.poolid', 0)
+            && (Session::get('union.uuid', 0) !== 0 || Session::get('union.uid', 0) !== 0)
+            && Session::get('union.poolid', 1) == Config::get('auth.poolid', 0)
             && Session::get('union.status', 0) !== 0
             && Session::get('union.roleid', 0) !== 0;
     }
@@ -140,8 +138,14 @@ final class Authorize {
      */
     public static function isAdmin() {
         return self::isLogin() &&
-            Session::get(self::$isAdmin, 0) === 1 &&
-            Session::get('gid', 100) <= 10;
+            Session::get(self::$isAdmin, 0) === 1
+            && (
+                Session::get('gid', 100) <= 10 ||
+                Session::get('union.gid', 100) <= 10 ||
+                Session::get('union.guid', 100) <= 10 ||
+
+                Session::get('union.roleid', 100) <= 10
+            );
     }
 
     /**

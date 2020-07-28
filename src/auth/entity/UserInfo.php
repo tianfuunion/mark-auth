@@ -35,6 +35,9 @@ final class UserInfo {
 
     /**
      * @return array|\think\Model|null
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
     public function find() {
         if (empty($this->where)) {
@@ -50,6 +53,9 @@ final class UserInfo {
 
     /**
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
     public function select() {
         if (empty($this->where)) {
@@ -75,7 +81,7 @@ final class UserInfo {
      * 获取加盐后的安全密码(64位)
      *
      * @param string $password
-     * @param string $domain
+     * @param string $host
      *
      * @return string
      */
@@ -91,13 +97,7 @@ final class UserInfo {
         $md5_pwd = md5($pwd);
         $hash_pwd = hash("sha256", $pwd);
 
-        $password = hash(
-            "sha256",
-            $md5_salt . "_" .
-            $md5_pwd . "_" .
-            $hash_pwd . "_" .
-            hash("sha256", $md5_salt . "_" . $md5_pwd)
-        );
+        $password = hash("sha256", $md5_salt . "_" . $md5_pwd . "_" . $hash_pwd . "_" . hash("sha256", $md5_salt . "_" . $md5_pwd));
 
         return $password;
     }

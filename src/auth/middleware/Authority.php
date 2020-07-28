@@ -174,11 +174,7 @@ abstract class Authority {
                 return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
             }
 
-            if (is_get()) {
-
-            } elseif (Request::isGet()) {
-
-            } else {
+            if (!(is_get() || Request::isGet())) {
                 $this->logcat('error', 'Authority::handler(401 身份认证)');
 
                 return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
@@ -191,19 +187,19 @@ abstract class Authority {
 
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
             } else {
-                $result = Authorize::dispenser(Config::get('auth.level', 'slave'),'auth_union');
-                $this->logcat('debug', 'Authority::handler(Authorize::dispenser)'. json_encode($result,JSON_UNESCAPED_UNICODE));
+                $result = Authorize::dispenser(Config::get('auth.level', 'slave'), 'auth_union');
+                $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
 
                 if ($result instanceof Redirect) {
                     $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
 
                     return $result;
                 } elseif (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                    $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result,JSON_UNESCAPED_UNICODE));
+                    $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
                     $this->onAuthorized($result);
                 } elseif (!empty($result) && is_array($result) && isset($result['uuid']) && !empty($result['uuid'])) {
-                    $this->logcat('debug', 'Authority::handler(Union UserInfo)' . json_encode($result,JSON_UNESCAPED_UNICODE));
+                    $this->logcat('debug', 'Authority::handler(Union UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
                     $this->onAuthorized($result);
                 } else {
@@ -284,8 +280,8 @@ abstract class Authority {
         if (!isset($access['allow']) || $access['allow'] != 1) {
             $this->logcat(
                 'debug', 'Authority::handler(402 权限不足)'
-                       . json_encode($channel, JSON_UNESCAPED_UNICODE)
-                       . ' Access' . json_encode($access, JSON_UNESCAPED_UNICODE)
+                       . ' Channel：' . json_encode($channel, JSON_UNESCAPED_UNICODE)
+                       . ' Access：' . json_encode($access, JSON_UNESCAPED_UNICODE)
             );
 
             return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
@@ -426,7 +422,7 @@ abstract class Authority {
      *
      * @param $userInfo
      */
-    protected abstract function onAuthorized($userInfo): void;
+    protected abstract function onAuthorized(array $userInfo): void;
 
     /**
      * 响应输出

@@ -258,12 +258,14 @@ class Client extends Sso {
                             $userinfo = $result['data'];
                             if (empty($userinfo)) {
                                 Log::error('Client::getUserInfo(UserInfo is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (empty($userinfo['openid'])) {
+                            } elseif (!isset($userinfo['openid']) || empty($userinfo['openid'])) {
                                 Log::error('Client::getUserInfo(UserInfo.openid is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (empty($userinfo['nickname'])) {
+                            } elseif (!isset($userinfo['nickname']) || empty($userinfo['nickname'])) {
                                 Log::error('Client::getUserInfo(UserInfo.nickname is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (empty($userinfo['sex'])) {
+                            } elseif (!isset($userinfo['sex']) || empty($userinfo['sex'])) {
                                 Log::error('Client::getUserInfo(UserInfo.sex is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                            } elseif (!isset($userinfo['avatar']) || empty($userinfo['avatar'])) {
+                                Log::error('Client::getUserInfo(UserInfo.avatar is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
                             } else {
                                 return $userinfo;
                             }
