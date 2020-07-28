@@ -39,7 +39,7 @@ class Channel {
      *
      * @return array|mixed
      */
-    public function getChannel($appid = 0, $url = '', $cache = 1) {
+    public function getChannel($appid = 0, $url = '', $cache = true) {
         $cacheKey = 'AuthUnion:channel';
         $result = array();
         if ($appid == 0) {
@@ -69,7 +69,7 @@ class Channel {
                     // ->where("app.domain", "=", $this->request->rootdomain())
                             ->where('channel.url', '=', $url)
                             ->order('channel.displayorder asc')
-                            ->cache($this->authority->expire)
+                    // ->cache($this->authority->expire)
                             ->find();
 
                 if (!empty($result)) {
@@ -93,18 +93,15 @@ class Channel {
             return $result;
         }
 
-        $curl = Curl::getInstance(true)
-                    ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/channel', 'json')
-                    ->appendData('appid', $appid)
-                    ->appendData('cache', $cache)
-                    ->appendData('url', urlencode($url));
+        $result = Curl::getInstance(true)
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/channel', 'json')
+                      ->appendData('appid', $appid)
+                      ->appendData('cache', $cache)
+                      ->appendData('url', urlencode($url))
+                      ->toArray();
 
-        $code = $curl->getResponseCode();
-
-        if ($code == 200) {
-            $result = $curl->toArray();
-
-            if (!empty($result) && $cache) {
+        if (!empty($result)) {
+            if ($cache) {
                 Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             } else {
                 Cache::delete($cacheKey);
@@ -112,25 +109,25 @@ class Channel {
 
             return $result;
         }
+        Cache::delete($cacheKey);
         self::runevent();
-        $this->authority->logcat('error', 'Channel:getChannel(' . $code . ')' . json_encode($curl->getInfo(), JSON_UNESCAPED_UNICODE));
+        $this->authority->logcat('error', 'Channel:getChannel(DataNotFoundException)' . $cacheKey. ' ' . json_encode($result,JSON_UNESCAPED_UNICODE));
 
-        return $result;
+        return array();
     }
 
     /**
      * 根据标识符获取频道信息
      *
-     * @param int    $poolid
-     * @param int    $appid
      * @param string $identifier
-     * @param int    $cache
+     * @param        $poolid
+     * @param        $appid
+     * @param bool   $cache
      *
-     * @return array|mixed|\think\Model|null
+     * @return array|mixed|\think\Model
      */
-    public function getIdentifier($poolid, $appid, $identifier = '', $cache = 1) {
+    public function getIdentifier(string $identifier, $poolid, $appid, $cache = true) {
         $cacheKey = 'AuthUnion:identifier';
-        $result = array();
 
         if (empty($poolid)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的用户池ID)');
@@ -166,11 +163,11 @@ class Channel {
                             ->where('appid', '=', $appid)
                             ->where('identifier', '=', $identifier)
                             ->order('displayorder')
-                            ->cache($this->authority->expire)
+                    // ->cache($this->authority->expire)
                             ->find();
 
                 if (!empty($result)) {
-                    if ($cache == 1) {
+                    if ($cache) {
                         // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
                     } else {
                         // Cache::delete($cacheKey);
@@ -194,31 +191,27 @@ class Channel {
                        ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/identifier', 'json')
                        ->appendData('poolid', $poolid)
                        ->appendData('appid', $appid)
-                       ->appendData('identifier', $identifier)
+                       ->appendData('identifier', urlencode($identifier))
                        ->appendData('cache', $cache)
                        ->toArray();
 
-        if (!empty($channel)) {
-            if (is_string($channel)) {
-                $channel = json_decode($channel, true);
+        if (!empty($channel) && !empty($channel['code']) && $channel['code'] == 200 && !empty($channel['data'])) {
+            if ($cache) {
+                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+            } else {
+                // Cache::delete($cacheKey);
             }
 
-            if (!empty($channel) && $channel['code'] == 200) {
-                $result = $channel['data'];
-            }
-        } else {
-            $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
+            return $channel['data'];
         }
+        $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
-        if (!empty($result) && $cache) {
-            // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
-            // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
-        } else {
-            // Cache::delete($cacheKey);
-            self::runevent();
-        }
+        Cache::delete($cacheKey);
+        self::runevent();
 
-        return $result;
+        return array();
     }
 
     /**
@@ -229,11 +222,12 @@ class Channel {
      * @param        $appid
      * @param        $poolid
      * @param int    $roleid
+     * @param bool   $cache
      *
      * @return array|mixed|\think\Model
      */
-    public function getAccess($channelid, string $identifier, $appid, $poolid, $roleid = 404) {
-        $cacheKey = 'channel:access:channelid:' . $channelid . ':appid:' . $appid . ':poolid:' . $poolid . ':roleid:' . $channelid;
+    public function getAccess($channelid, string $identifier, $poolid, $appid, $roleid = 404, $cache = true) {
+        $cacheKey = 'channel:access:channelid:' . $channelid . ':poolid:' . $poolid . ':appid:' . $appid . ':roleid:' . $roleid;
 
         if (Config::get('auth.level', 'slave') == 'master') {
             try {
@@ -244,6 +238,7 @@ class Channel {
                             ->where('channelid', '=', $channelid)
                             ->where('roleid', '=', $roleid)
                             ->order('subtime', 'desc')
+                    // ->cache($this->authority->expire)
                             ->find();
 
                 if (!empty($result)) {
@@ -268,23 +263,23 @@ class Channel {
 
         $access = Curl::getInstance(true)
                       ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/access', 'json')
-                      ->appendData('identifier', $identifier)
-                      ->appendData('channelid', $channelid)
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
+                      ->appendData('channelid', $channelid)
+                      ->appendData('identÞifier', $identifier)
                       ->appendData('roleid', $roleid)
                       ->toArray();
 
         if (!empty($access) && !empty($access['code']) && $access['code'] == 200 && !empty($access['data'])) {
-            Cache::set($cacheKey, $access['data'], Config::get('session.expire', 1440));
+            if ($cache) {
+                // Cache::set($cacheKey, $access['data'], Config::get('session.expire', 1440));
+                // $this->authority->$cache->set($cacheKey, $access, Config::get('session.expire', 1440));
+            }
 
-            // $this->authority->$cache->set($cacheKey, $access, Config::get('session.expire', 1440));
             return $access['data'];
-        } else {
-            $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $cacheKey);
-
-            Cache::delete($cacheKey);
         }
+        $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $cacheKey . ' ' .json_encode($access,JSON_UNESCAPED_UNICODE));
+        Cache::delete($cacheKey);
 
         return array();
     }

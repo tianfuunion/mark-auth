@@ -130,10 +130,10 @@ abstract class Authority {
         /**
          * @todo 2、校验标识符，校验频道状态
          */
-        $channel = $this->channel->getIdentifier($this->poolid, $this->appid, $identifier, !empty($this->debug) ? 1 : 0);
+        $channel = $this->channel->getIdentifier($identifier, $this->poolid, $this->appid, $this->debug);
         if (empty($channel)) {
             $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
-            $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
+            $channel = $this->channel->getChannel(rtrim(Request::server('document_uri'), "/"),$this->appid,  $this->debug);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
@@ -258,7 +258,14 @@ abstract class Authority {
         /**
          * @todo 8、校验授权信息
          */
-        $access = $this->channel->getAccess($channel['channelid'] ?? 404, $identifier, $this->appid, $this->poolid, $this->session->get('union.roleid', 404));
+        $access = $this->channel->getAccess(
+            $channel['channelid'] ?? 404,
+            $identifier,
+            $this->poolid,
+            $this->appid,
+            $this->session->get('union.roleid', 404),
+            $this->debug
+        );
 
         if (Authorize::isAdmin() || Authorize::isTesting()) {
             $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');
