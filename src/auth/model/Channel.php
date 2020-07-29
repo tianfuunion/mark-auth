@@ -38,6 +38,7 @@ class Channel {
      * @param int    $cache
      *
      * @return array|mixed
+     * @deprecated
      */
     public function getChannel($appid = 0, $url = '', $cache = true) {
         $cacheKey = 'AuthUnion:channel';
@@ -111,7 +112,7 @@ class Channel {
         }
         Cache::delete($cacheKey);
         self::runevent();
-        $this->authority->logcat('error', 'Channel:getChannel(DataNotFoundException)' . $cacheKey. ' ' . json_encode($result,JSON_UNESCAPED_UNICODE));
+        $this->authority->logcat('error', 'Channel:getChannel(DataNotFoundException)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
         return array();
     }
@@ -278,7 +279,7 @@ class Channel {
 
             return $access['data'];
         }
-        $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $cacheKey . ' ' .json_encode($access,JSON_UNESCAPED_UNICODE));
+        $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $cacheKey . ' ' . json_encode($access, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
         return array();
