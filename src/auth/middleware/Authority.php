@@ -145,15 +145,15 @@ abstract class Authority {
             $this->logcat('debug', 'Authority::handler(Check Super Manager has Channel privileges)' . $identifier);
         }
 
-        if (empty($channel)) {
-            $this->logcat('error', 'Authority::handler(412 无效的频道信息)' . $identifier);
+        if (empty($channel) || !isset($channel['channelid']) || empty($channel['channelid']) || !isset($channel['status']) || empty($channel['status'])) {
+            $this->logcat('error', 'Authority::handler(404 无效的频道信息)' . $identifier);
 
-            return $this->response('', 412, 'Invalid Channel information ', '无效的频道信息');
+            return $this->response('', 404, 'Invalid Channel information ', '无效的频道信息');
         }
         if (!isset($channel['status']) || $channel['status'] != 1) {
-            $this->logcat('error', 'Authority::handler(501 该频道尚未启用)' . $identifier);
+            $this->logcat('error', 'Authority::handler(410 该频道尚未启用)' . $identifier);
 
-            return $this->response('', 503, 'Channel information not available', '该频道尚未启用');
+            return $this->response('', 410, 'Channel information not available', '该频道尚未启用');
         }
 
         /**
