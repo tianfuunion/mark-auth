@@ -89,6 +89,9 @@ final class UserInfo {
         if (empty($host)) {
             $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
         }
+
+        $host = parse_host($host);
+
         // 密码加盐字段
         $salt = strtolower(trim($host));
         $pwd = trim(strval($password));

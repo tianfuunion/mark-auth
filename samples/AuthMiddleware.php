@@ -1,306 +1,306 @@
 <?php
 
-declare (strict_types=1);
+    declare (strict_types=1);
 
-namespace app;
+    namespace app;
 
-use Closure;
-use think\App;
-use think\Session;
-use think\Request;
-use think\Response;
+    use Closure;
+    use think\App;
+    use think\Session;
+    use think\Request;
+    use think\Response;
 
-use think\facade\Cache;
-use think\facade\Config;
-use think\facade\Db;
-use think\facade\Log;
-use think\facade\View;
+    use think\facade\Cache;
+    use think\facade\Config;
+    use think\facade\Db;
+    use think\facade\Log;
+    use think\facade\View;
 
-use think\db\exception\DataNotFoundException;
-use think\db\exception\ModelNotFoundException;
-use think\db\exception\DbException;
+    use think\db\exception\DataNotFoundException;
+    use think\db\exception\ModelNotFoundException;
+    use think\db\exception\DbException;
 
-use mark\auth\Authorize;
-use mark\auth\middleware\Authority;
-use mark\response\Responsive;
-
-/**
- * Class AuthCheck
- *
- * @todo    AppID的有效范围，
- *
- * @package app
- */
-class AuthMiddleware extends Authority {
-
-    /** @var App */
-    protected $app;
-    /** @var Request */
-    protected $request;
-    /** @var Session */
-    protected $session;
-
-    public function __construct(App $app, Session $session) {
-        $this->app = $app;
-        $this->session = $session;
-
-        $this->setPoolId(Config::get('auth.poolid'));
-        $this->setAppId(Config::get('auth.appid'));
-        $this->setDebug($this->app->isDebug());
-        // $this->setCache($this->request->param('cache', true));
-        // $this->setCache($this->app->cache);
-
-        $handler = Cache::handler();
-        // $this->setCache($handler);
-
-        $instance = Cache::instance();
-        // $this->setCache($instance);
-
-        parent::__construct();
-    }
+    use mark\auth\Authorize;
+    use mark\auth\middleware\Authority;
+    use mark\response\Responsive;
 
     /**
-     * Session初始化
+     * Class AuthCheck
      *
-     * @access public
+     * @todo    AppID的有效范围，
      *
-     * @param Request $request
-     * @param Closure $next
-     *
-     * @return Response
+     * @package app
      */
-    public function handle($request, Closure $next) {
-        $this->request = $request;
+    class AuthMiddleware extends Authority {
 
-        // AuthUnion 初始化
-        $this->initialize();
+        /** @var App */
+        protected $app;
+        /** @var Request */
+        protected $request;
+        /** @var Session */
+        protected $session;
 
-        /** @var Response $response */
-        // $response = $next($request);
+        public function __construct(App $app, Session $session) {
+            $this->app = $app;
+            $this->session = $session;
+
+            $this->setPoolId(Config::get('auth.poolid'));
+            $this->setAppId(Config::get('auth.appid'));
+            $this->setDebug($this->app->isDebug());
+            // $this->setCache($this->request->param('cache', true));
+            // $this->setCache($this->app->cache);
+
+            $handler = Cache::handler();
+            // $this->setCache($handler);
+
+            $instance = Cache::instance();
+            // $this->setCache($instance);
+
+            parent::__construct();
+        }
 
         /**
-         * @todo 排除验证码,临时办法
+         * Session初始化
+         *
+         * @access public
+         *
+         * @param Request $request
+         * @param Closure $next
+         *
+         * @return Response
          */
-        if (stripos($request->server('request_uri'), 'captcha') !== false || $request->server('request_uri') == '/') {
-            return $next($request);
-        }
+        public function handle($request, Closure $next) {
+            $this->request = $request;
 
-        $result = parent::handler();
-        if ($result instanceof Response) {
-            $this->logcat('debug', 'AuthMiddleware::handle（Response Redirect）' . $this->getIdentifier());
+            // AuthUnion 初始化
+            $this->initialize();
 
-            return $result;
-        }
-        if (is_array($result) && !empty($result['code'])) {
-            $this->logcat('debug', 'AuthMiddleware::handler(' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
+            /** @var Response $response */
+            // $response = $next($request);
 
-            switch ($result["code"]) {
-                case 200:
-                    // 正常
-                    return $next($request);
-                    break;
-                case 302:
-                    // 跳转
-                    return redirect($result['data']);
-                    break;
-                case 401:
-                    // 认证
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                case 404:
-                    // 错误
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                case 412:
-                    // 无效
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                case 503:
-                    // 维护
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                default:
-                    // 异常
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
+            /**
+             * @todo 排除验证码,临时办法
+             */
+            if (stripos($request->server('request_uri'), 'captcha') !== false || $request->server('request_uri') == '/') {
+                return $next($request);
             }
-        }
-        $this->logcat('error', 'AuthMiddleware::handler(Not Code ' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-        return $next($request);
-    }
+            $result = parent::handler();
+            if ($result instanceof Response) {
+                $this->logcat('debug', 'AuthMiddleware::handle（Response Redirect）' . $this->getIdentifier());
 
-    /**
-     * 初始化
-     *
-     */
-    protected function initialize(): void {
-        // registerFilter("output", "compress_html");
-        // register_function("autoversion","autoversion");
+                return $result;
+            }
+            if (is_array($result) && !empty($result['code'])) {
+                $this->logcat('debug', 'AuthMiddleware::handler(' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-        // script("jquery-2.2.4.min", "open","https://res.tianfu.pub/jquery/script");
-        // script("jquery-ui.min", "open","https://res.tianfu.pub/jquery/script");
-        // script("jquery.session.min", "open","https://res.tianfu.pub/jquery/script");
-        // script("jquery.cookie", "open", "https://res.tianfu.pub/jquery/script");
-        // script("jquery.bxslider", "open","https://res.tianfu.pub/jquery/script");
-        // script("jquery.simplesidebar", "open","https://res.tianfu.pub/jquery/script");
-        // script("jquery.lazyload.min",,"open","//open"lazyload/script");
-        // script(lazysizes.min,"open","lazyload/script");
-
-        style('amazeui', 'open', 'https://res.tianfu.pub/amazeui/style');
-
-        style('weui.min', 'open', 'https://res.tianfu.pub/weui/style');
-        style('jquery-weui.min', 'open', 'https://res.tianfu.pub/weui/style');
-
-        script('weui.min', 'open', 'https://res.tianfu.pub/weui/script');
-        script('jquery-weui.min', 'open', 'https://res.tianfu.pub/weui/script');
-        script('fastclick', 'open', 'https://res.tianfu.pub/weui/script');
-
-        style('commons', 'open');
-        style('auto', 'open');
-
-        $appname = app('http')->getname();
-        style($appname === 'index' ? 'portal' : $appname, 'open');
-        View::assign('appname', $appname);
-
-        $this->request->appname = $appname;
-
-        style(strtolower($this->request->controller()) === 'index' ? 'portal' : strtolower($this->request->controller()), 'open');
-
-        style('account', 'open');
-        style('console', 'open');
-        style('navigation-responsive', 'open');
-        style('header-responsive', 'open');
-
-        style('mark.collapse', 'open', 'https://res.tianfu.pub/collapse/style');
-        script('mark.collapse', 'open', 'https://res.tianfu.pub/collapse/script');
-
-        // style("amazeui", "open", "https://res.tianfu.pub/amazeui/style");
-        // style("admin", "open", "https://res.tianfu.pub/amazeui/style");
-        // style("app", "open", "https://res.tianfu.pub/amazeui/style");
-
-        // script("amazeui.min", "open", "https://res.tianfu.pub/amazeui/script");
-        // script("app", "open", "https://res.tianfu.pub/amazeui/script");
-        // script("iscroll", "open", "https://res.tianfu.pub/amazeui/script");
-
-        // style("mark.table", "open", "https://res.tianfu.pub/table/style");
-        // style("mark.form", "open", "https://res.tianfu.pub/validform/style");
-        // script("mark.min", "open", "https://res.tianfu.pub/mark/script");
-        script('mark', 'open', 'https://res.tianfu.pub/mark/script');
-        script("mark.verify", "open", "https://res.tianfu.pub/validform/script");
-        // script("mark.multipicker", "open", "https://res.tianfu.pub/validform/script");
-        // style("mark.treeview", "open", "https://res.tianfu.pub/treeview/style");
-        // script("mark.treeview", "open", "https://res.tianfu.pub/treeview/script");
-
-        if (Config::has('app.iconfont')) {
-            foreach (Config::get('app.iconfont') as $key => $item) {
-                switch ($item['type']) {
-                    case 'style':
-                        style($item['name'], 'open', $item['url']);
+                switch ($result["code"]) {
+                    case 200:
+                        // 正常
+                        return $next($request);
                         break;
-                    case 'script':
-                        script($item['name'], 'open', $item['url']);
+                    case 302:
+                        // 跳转
+                        return redirect($result['data']);
+                        break;
+                    case 401:
+                        // 认证
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    case 404:
+                        // 错误
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    case 412:
+                        // 无效
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    case 503:
+                        // 维护
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
                         break;
                     default:
+                        // 异常
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
                         break;
                 }
             }
-        }
-    }
+            $this->logcat('error', 'AuthMiddleware::handler(Not Code ' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-    /**
-     * 获取访问标识符
-     *
-     * @return string
-     */
-    protected function getIdentifier(): string {
-        return app('http')->getName(true) . ":" . $this->request->controller(true) . ":" . $this->request->action(true);
-    }
-
-    /**
-     * 获取排除项
-     *
-     * @return array
-     */
-    protected function getIgnore(): array {
-        return Config::get('auth.ignore', array());
-    }
-
-    /**
-     * 是否排除当前标识符，中间件可重写本方法来自定义排除算法
-     *
-     * @param string $identifier
-     *
-     * @return bool
-     */
-    protected function has_exclude(string $identifier): bool {
-        $this->logcat('info', 'AuthMiddleware::has_exclude(' . $identifier . ')');
-
-        if (stripos($identifier, 'captcha') !== false || stripos($identifier, '/') !== false) {
-            return true;
+            return $next($request);
         }
 
-        return parent::has_exclude($identifier);
-    }
+        /**
+         * 初始化
+         *
+         */
+        protected function initialize(): void {
+            // registerFilter("output", "compress_html");
+            // register_function("autoversion","autoversion");
 
-    /**
-     * 验证频道
-     *
-     * @return bool
-     */
-    protected function has_channel(): bool {
-        try {
-            $channel = Db::name('app_channel')
-                         ->field(true)
-                         ->where('url', '=', rtrim($this->request->server('request_uri'), "/"))
-                         ->cache(false)
-                         ->find();
-            if (!empty($channel)) {
-                $data['channel'] = $channel;
+            // script("jquery-2.2.4.min", "open","https://res.tianfu.pub/jquery/script");
+            // script("jquery-ui.min", "open","https://res.tianfu.pub/jquery/script");
+            // script("jquery.session.min", "open","https://res.tianfu.pub/jquery/script");
+            // script("jquery.cookie", "open", "https://res.tianfu.pub/jquery/script");
+            // script("jquery.bxslider", "open","https://res.tianfu.pub/jquery/script");
+            // script("jquery.simplesidebar", "open","https://res.tianfu.pub/jquery/script");
+            // script("jquery.lazyload.min",,"open","//open"lazyload/script");
+            // script(lazysizes.min,"open","lazyload/script");
 
+            style('amazeui', 'open', 'https://res.tianfu.pub/amazeui/style');
+
+            style('weui.min', 'open', 'https://res.tianfu.pub/weui/style');
+            style('jquery-weui.min', 'open', 'https://res.tianfu.pub/weui/style');
+
+            script('weui.min', 'open', 'https://res.tianfu.pub/weui/script');
+            script('jquery-weui.min', 'open', 'https://res.tianfu.pub/weui/script');
+            script('fastclick', 'open', 'https://res.tianfu.pub/weui/script');
+
+            style('commons', 'open');
+            style('auto', 'open');
+
+            $appname = app('http')->getname();
+            style($appname === 'index' ? 'portal' : $appname, 'open');
+            View::assign('appname', $appname);
+
+            $this->request->appname = $appname;
+
+            style($this->request->controller(true) === 'index' ? 'portal' : $this->request->controller(true), 'open');
+
+            style('account', 'open');
+            style('console', 'open');
+            style('navigation-responsive', 'open');
+            style('header-responsive', 'open');
+
+            style('mark.collapse', 'open', 'https://res.tianfu.pub/collapse/style');
+            script('mark.collapse', 'open', 'https://res.tianfu.pub/collapse/script');
+
+            // style("amazeui", "open", "https://res.tianfu.pub/amazeui/style");
+            // style("admin", "open", "https://res.tianfu.pub/amazeui/style");
+            // style("app", "open", "https://res.tianfu.pub/amazeui/style");
+
+            // script("amazeui.min", "open", "https://res.tianfu.pub/amazeui/script");
+            // script("app", "open", "https://res.tianfu.pub/amazeui/script");
+            // script("iscroll", "open", "https://res.tianfu.pub/amazeui/script");
+
+            // style("mark.table", "open", "https://res.tianfu.pub/table/style");
+            // style("mark.form", "open", "https://res.tianfu.pub/validform/style");
+            // script("mark.min", "open", "https://res.tianfu.pub/mark/script");
+            script('mark', 'open', 'https://res.tianfu.pub/mark/script');
+            script("mark.verify", "open", "https://res.tianfu.pub/validform/script");
+            // script("mark.multipicker", "open", "https://res.tianfu.pub/validform/script");
+            // style("mark.treeview", "open", "https://res.tianfu.pub/treeview/style");
+            // script("mark.treeview", "open", "https://res.tianfu.pub/treeview/script");
+
+            if (Config::has('app.iconfont')) {
+                foreach (Config::get('app.iconfont') as $key => $item) {
+                    switch ($item['type']) {
+                        case 'style':
+                            style($item['name'], 'open', $item['url']);
+                            break;
+                        case 'script':
+                            script($item['name'], 'open', $item['url']);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+
+        /**
+         * 获取访问标识符
+         *
+         * @return string
+         */
+        protected function getIdentifier(): string {
+            return app('http')->getName(true) . ":" . $this->request->controller(true) . ":" . $this->request->action(true);
+        }
+
+        /**
+         * 获取排除项
+         *
+         * @return array
+         */
+        protected function getIgnore(): array {
+            return Config::get('auth.ignore', array());
+        }
+
+        /**
+         * 是否排除当前标识符，中间件可重写本方法来自定义排除算法
+         *
+         * @param string $identifier
+         *
+         * @return bool
+         */
+        protected function has_exclude(string $identifier): bool {
+            $this->logcat('info', 'AuthMiddleware::has_exclude(' . $identifier . ')');
+
+            if (stripos($identifier, 'captcha') !== false || stripos($identifier, '/') !== false) {
                 return true;
             }
-        } catch (DataNotFoundException $e) {
-        } catch (ModelNotFoundException $e) {
-        } catch (DbException $e) {
+
+            return parent::has_exclude($identifier);
         }
 
-        return false;
-    }
+        /**
+         * 验证频道
+         *
+         * @return bool
+         */
+        protected function has_channel(): bool {
+            try {
+                $channel = Db::name('app_channel')
+                    ->field(true)
+                    ->where('url', '=', rtrim($this->request->server('request_uri'), "/"))
+                    ->cache(false)
+                    ->find();
+                if (!empty($channel)) {
+                    $data['channel'] = $channel;
 
-    /**
-     * 验证角色
-     *
-     * @return bool|void
-     */
-    protected function has_role(): bool {
-        return $this->session->has("union.role");
-    }
+                    return true;
+                }
+            } catch (DataNotFoundException $e) {
+            } catch (ModelNotFoundException $e) {
+            } catch (DbException $e) {
+            }
 
-    /**
-     * 验证联合授权
-     *
-     * @return bool
-     */
-    protected function has_union(): bool {
-        return $this->session->has("union");
-    }
+            return false;
+        }
 
-    /**
-     * 验证权限
-     *
-     * @return bool
-     */
-    protected function has_permission(): bool {
-        return $this->session->has("union.permission");
-    }
+        /**
+         * 验证角色
+         *
+         * @return bool|void
+         */
+        protected function has_role(): bool {
+            return $this->session->has("union.role");
+        }
 
-    /**
-     * 验证
-     *
-     * @param \think\Request $request
-     */
-    public function validate(Request $request) {
+        /**
+         * 验证联合授权
+         *
+         * @return bool
+         */
+        protected function has_union(): bool {
+            return $this->session->has("union");
+        }
+
+        /**
+         * 验证权限
+         *
+         * @return bool
+         */
+        protected function has_permission(): bool {
+            return $this->session->has("union.permission");
+        }
+
+        /**
+         * 验证
+         *
+         * @param \think\Request $request
+         */
+        public function validate(Request $request) {
 
         }
 

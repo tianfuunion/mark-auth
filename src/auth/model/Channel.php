@@ -56,10 +56,10 @@ class Channel {
         $cacheKey .= ':domain:' . $url;
 
         // TODO：临时关闭缓存
-        if (Cache::has($cacheKey)) {
+        if (Cache::has($cacheKey) && $cache) {
             // $channel = $this->authority->cache->get($cacheKey);
             $channel = Cache::get($cacheKey);
-            if (!empty($channel) && $cache) {
+            if (!empty($channel)) {
                 // return $channel;
             }
         }
@@ -73,7 +73,7 @@ class Channel {
                              ->where('app.appid', '=', $appid)
                     // ->where("app.domain", "=", $this->request->rootdomain())
                              ->where('channel.url', '=', $url)
-                             ->order('channel.displayorder asc')
+                             ->order('channel.displayorder')
                     // ->cache($this->authority->expire)
                              ->find();
 
@@ -131,8 +131,14 @@ class Channel {
      *
      * @return array|mixed|\think\Model
      */
-    public function getIdentifier(string $identifier, $poolid, $appid, $cache = true) {
+    public function getIdentifier($appid, $poolid, string $identifier, $cache = true) {
         $cacheKey = 'AuthUnion:identifier';
+        if (empty($appid)) {
+            $this->authority->logcat('error', 'Channel::getIdentifier(无效的AppId)');
+
+            return array();
+        }
+        $cacheKey .= ':appid:' . $appid;
 
         if (empty($poolid)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的用户池ID)');
@@ -140,12 +146,6 @@ class Channel {
             return array();
         }
         $cacheKey .= ':poolid:' . $poolid;
-        if (empty($appid)) {
-            $this->authority->logcat('error', 'Channel::getIdentifier(无效的AppId)');
-
-            return array();
-        }
-        $cacheKey .= ':appid:' . $appid;
 
         if (empty($identifier)) {
             $this->authority->logcat('error', 'Channel::getIdentifier(无效的频道标识符)');
@@ -155,10 +155,10 @@ class Channel {
 
         $cacheKey .= ':identifier:' . $identifier;
         // TODO：临时关闭缓存
-        if (Cache::has($cacheKey)) {
+        if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
             $channel = Cache::get($cacheKey);
-            if (!empty($channel) && $cache) {
+            if (!empty($channel)) {
                 // return $channel;
             }
         }
@@ -167,7 +167,7 @@ class Channel {
             try {
                 $channel = Db::name('app_channel')
                              ->field(true)
-                    // ->where('poolid', '=', $poolid)
+                             ->where('poolid', '=', $poolid)
                              ->where('appid', '=', $appid)
                              ->where('identifier', '=', $identifier)
                              ->order('displayorder')
@@ -225,21 +225,35 @@ class Channel {
     /**
      * 根据标识符，获取权限信息
      *
-     * @param        $channelid
-     * @param string $identifier
-     * @param        $appid
-     * @param        $poolid
+     * @param string $appid
+     * @param string $poolid
+     * @param int    $channelid
      * @param int    $roleid
      * @param bool   $cache
      *
      * @return array|mixed|\think\Model
      */
-    public function getAccess($channelid, string $identifier, $poolid, $appid, $roleid = 404, $cache = true) {
-        $cacheKey = 'channel:access:channelid:' . $channelid . ':poolid:' . $poolid . ':appid:' . $appid . ':roleid:' . $roleid;
+    public function getAccess(string $appid, string $poolid, int $channelid, $roleid = 404, $cache = true) {
+        if (empty($appid)) {
+            $appid = Request::param('appid', Config::get("auth.appid"));
+        }
 
-        if (Cache::has($cacheKey)) {
+        if (empty($poolid)) {
+            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+        }
+
+        if (empty($roleid)) {
+            $roleid = Session::get('union.roleid', 404);
+        }
+
+        if (empty($channelid)) {
+            return array();
+        }
+        $cacheKey = 'channel:access:appid:' . $appid . ':poolid:' . $poolid . ':channelid:' . $channelid . ':roleid:' . $roleid;
+
+        if (Cache::has($cacheKey) && $cache) {
             $access = Cache::get($cacheKey);
-            if (!empty($access) && $cache) {
+            if (!empty($access)) {
                 // return $access;
             }
         }
@@ -248,8 +262,8 @@ class Channel {
             try {
                 $access = Db::name('access')
                             ->field(true)
-                    // ->where('appid', '=', $appid)
-                    // ->where('poolid', '=', $poolid)
+                            ->where('appid', '=', $appid)
+                            ->where('poolid', '=', $poolid)
                             ->where('channelid', '=', $channelid)
                             ->where('roleid', '=', $roleid)
                             ->order('subtime', 'desc')
@@ -278,14 +292,14 @@ class Channel {
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('channelid', $channelid)
-                      ->appendData('identÞifier', $identifier)
                       ->appendData('roleid', $roleid)
+                      ->appendData('cache', $cache ? 1 : 0)
                       ->toArray();
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                // Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
             }
 
             return $result['data'];
@@ -299,51 +313,49 @@ class Channel {
     /**
      * 获取桌面频道列表
      *
-     * @param array $param
-     * @param bool  $cache
+     * @param string $appid
+     * @param string $poolid
+     * @param int    $roleid
+     * @param int    $status
+     * @param bool   $cache
      *
      * @return array|mixed
      */
-    public function getWorkspace(array $param = array('appid' => '', 'poolid' => '', 'roleid' => 404, 'status' => 1), $cache = true) {
+    public function getWorkspace($appid = '', $poolid = '', $roleid = 404, $status = 1, $cache = true) {
         $cacheKey = 'channel:workspace:';
-        if (isset($param['appid']) && !empty($param['appid'])) {
-            // $cacheKey .= ':appid:' . $param['appid'];
-        } else {
-            // $cacheKey .= ':appid:' . Request::param('appid', Config::get("auth.appid"));
-            // $param['appid'] = Request::param('appid', Config::get("auth.appid"));
+        if (empty($appid)) {
+            $appid = Request::param('appid', Config::get("auth.appid"));
+        }
+        $cacheKey .= ':appid:' . $appid;
+
+        if (empty($poolid)) {
+            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+        }
+        $cacheKey .= ':poolid:' . $poolid;
+
+        if (empty($roleid)) {
+            $roleid = Session::get('union.roleid', 404);
         }
 
-        if (isset($param['poolid']) && !empty($param['poolid'])) {
-            $cacheKey .= ':poolid:' . $param['poolid'];
-        } else {
-            $cacheKey .= ':poolid:' . Config::get('auth.poolid', 0);
-            $param['poolid'] = Config::get('auth.poolid', 0);
+        if (empty($status)) {
+            $status = 1;
         }
+        $cacheKey .= ':status:' . $status;
 
-        if (isset($param['roleid']) && !empty($param['roleid'])) {
-            $cacheKey .= ':roleid:' . $param['roleid'];
-        } else {
-            $cacheKey .= ':roleid:' . Session::get('union.roleid', 404);
-            $param['roleid'] = Session::get('union.roleid', 404);
-        }
-
-        if (isset($param['status']) && !empty($param['status'])) {
-            $cacheKey .= ':status:' . $param['status'];
-        } else {
-            $cacheKey .= ':status:1';
-            $param['status'] = 1;
-        }
-
-        if (Cache::has($cacheKey)) {
+        if (Cache::has($cacheKey) && $cache) {
             $workspace = Cache::get($cacheKey);
-            if (!empty($workspace) && $cache) {
+            if (!empty($workspace)) {
                 // return $workspace;
             }
         }
 
         $result = Curl::getInstance(true)
                       ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/workspace', 'json')
-                      ->append($param)
+                      ->appendData('appid', $appid)
+                      ->appendData('poolid', $poolid)
+                      ->appendData('roleid', $roleid)
+                      ->appendData('status', $status)
+                      ->appendData('cache', $cache ? 1 : 0)
                       ->toArray();
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
