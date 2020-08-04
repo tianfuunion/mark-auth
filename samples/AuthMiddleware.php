@@ -12,6 +12,7 @@
 
     use think\facade\Cache;
     use think\facade\Config;
+    use think\facade\Cookie;
     use think\facade\Db;
     use think\facade\Log;
     use think\facade\View;
@@ -324,33 +325,36 @@
         protected function onAuthorized(array $userInfo): void {
             if ($userInfo && is_array($userInfo) && isset($userInfo['openid']) && !empty($userInfo['openid'])) {
                 // @todo 此处获取到微信UserInfo，请使用本地请求，用户登录数据(此处应统一为UnionInfo)，
-                // $user = app\account\model\User::weChatAuth($userInfo);
+                // $user = User::weChatAuth($userInfo);
+                $this->session->set('user_wechat', $userInfo);
             }
             if (!empty($userInfo) && is_array($userInfo) && isset($userInfo['uuid'])) {
                 // @todo 临时办法,解决方案为直接将获取到的UserInfo存储到Session中
-                // $user = app\account\model\User::loginAgent(array('uid' => $userInfo['uuid']));
+                // $user = User::loginAgent(array('uid' => $userInfo['uuid']));
+                $this->session->set('user_info', $userInfo);
             }
-
             foreach ($userInfo as $key => $item) {
-                \think\facade\Session::set($key, $item);
-                if (!is_array($item)) {
-                    if ($key == 'avatar') {
-                        \think\facade\Cookie::set($key, basename($item));
-                    } else {
-                        \think\facade\Cookie::set($key, strval($item));
+                if ($key == 'avatar') {
+                    $this->session->set($key, basename($item));
+                    Cookie::set($key, basename($item));
+                } else {
+                    $this->session->set($key, $item);
+                    if (!is_array($item)) {
+                        Cookie::set($key, (string)$item);
                     }
                 }
             }
 
-            \think\facade\Session::delete('password');
-            \think\facade\Session::set('login', 1);
-            \think\facade\Session::set('isLogin', 1);
-            \think\facade\Session::set('expiretime', time() + Config::get('auth.expire', 1440));
+            $this->session->delete('password');
+            $this->session->set('login', 1);
+            $this->session->set('isLogin', 1);
+            $this->session->set('expiretime', time() + Config::get('auth.expire', 1440));
 
-            \think\facade\Cookie::delete('password');
-            \think\facade\Cookie::set("login", "1");
-            \think\facade\Cookie::set("isLogin", "1");
-            \think\facade\Cookie::set('expiretime', (string)(time() + intval(Config::get('auth.expire', 1440))));
+            Cookie::delete('password');
+            Cookie::set("login", "1");
+            Cookie::set("isLogin", "1");
+            Cookie::set('expiretime', (string)(time() + (int)Config::get('auth.expire', 1440)));
+            Cookie::set("TF_Cookie", $this->session->getId(), array('domain' => "tianfu.ink"));
         }
 
         public function logcat($level, $message, array $context = []): void {

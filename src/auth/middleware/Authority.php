@@ -187,25 +187,25 @@ abstract class Authority {
                 $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
                 return $this->response($url, 302, 'Unauthorized', '登录请求');
+            }
+            $result = Authorize::dispenser(Config::get('auth.level', 'slave'), 'auth_union');
+            $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
+
+            if ($result instanceof Redirect) {
+                $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
+
+                return $result;
+            }
+            if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                $this->onAuthorized($result);
+            } elseif (!empty($result) && is_array($result) && isset($result['uuid']) && !empty($result['uuid'])) {
+                $this->logcat('debug', 'Authority::handler(Union UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                $this->onAuthorized($result);
             } else {
-                $result = Authorize::dispenser(Config::get('auth.level', 'slave'), 'auth_union');
-                $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
-
-                if ($result instanceof Redirect) {
-                    $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
-
-                    return $result;
-                } elseif (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                    $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                    $this->onAuthorized($result);
-                } elseif (!empty($result) && is_array($result) && isset($result['uuid']) && !empty($result['uuid'])) {
-                    $this->logcat('debug', 'Authority::handler(Union UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                    $this->onAuthorized($result);
-                } else {
-                    $this->logcat('debug', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
-                }
+                $this->logcat('debug', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
             }
         }
 
@@ -301,7 +301,6 @@ abstract class Authority {
         }
 
         if (!isset($access['method']) || stripos($access['method'], Request::method()) !== false) {
-
             $this->logcat('info', 'Authority::handler(Success::' . Request::method() . ')' . Request::url(true));
 
             return $this->response('', 200);
