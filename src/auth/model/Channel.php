@@ -291,6 +291,7 @@ class Channel {
                       ->appendData('poolid', $poolid)
                       ->appendData('roleid', $roleid)
                       ->appendData('cache', $cache ? 1 : 0)
+                      ->appendData('version', '2')
                       ->toArray();
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
