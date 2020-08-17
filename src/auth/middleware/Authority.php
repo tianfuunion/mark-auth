@@ -130,11 +130,11 @@ abstract class Authority {
         /**
          * @todo 2、校验标识符，校验频道状态
          */
-        $channel = $this->channel->getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
+        $channel = Channel::getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
 
         if (empty($channel)) {
             $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
-            $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
+            $channel = Channel::getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
@@ -230,9 +230,8 @@ abstract class Authority {
             }
             if (Config::get('auth.level', 'slave') == 'master') {
                 //@todo 临时机制，获取授权信息，
-                $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
-
-                return $this->response($url, 302, 'Unauthorized', '登录请求');
+                // $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
+                // return $this->response($url, 302, 'Unauthorized', '登录请求');
             }
             if (is_get() || Request::isGet()) {
                 $url = Config('auth.host') . '/auth.php/oauth2/authorize'
@@ -259,7 +258,7 @@ abstract class Authority {
         /**
          * @todo 8、校验授权信息
          */
-        $access = $this->channel->getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
+        $access = Channel::getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
 
         if (Authorize::isAdmin() || Authorize::isTesting()) {
             $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');

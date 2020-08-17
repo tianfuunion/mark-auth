@@ -40,15 +40,13 @@ class Channel {
      * @param bool   $cache
      *
      * @return array|bool|false|string|\think\Model
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      * @deprecated
      */
-    public function getChannel($appid = 0, $url = '', $cache = true) {
-        $cacheKey = 'AuthUnion:channel';
-
-        if ($appid == 0) {
-            $appid = $this->authority->appid;
-        }
-        $cacheKey .= ':appid:' . $appid;
+    public static function getChannel($appid = 0, $url = '', $cache = true) {
+        $cacheKey = 'AuthUnion:channel:appid:' . $appid;
 
         if (empty($url)) {
             $url = Request::server('document_uri');
@@ -65,34 +63,27 @@ class Channel {
         }
 
         if (Config::get('auth.level', 'slave') == 'master') {
-            try {
-                $channel = Db::name('app_channel')
-                             ->table('pro_app app, pro_app_channel channel')
-                             ->field('channel.*, app.appid, app.domain, app.host')
-                             ->where('app.appid = channel.appid')
-                             ->where('app.appid', '=', $appid)
-                    // ->where("app.domain", "=", $this->request->rootdomain())
-                             ->where('channel.url', '=', $url)
-                             ->order('channel.displayorder')
-                    // ->cache($this->authority->expire)
-                             ->find();
+            $channel = Db::name('app_channel')
+                         ->table('pro_app app, pro_app_channel channel')
+                         ->field('channel.*, app.appid, app.domain, app.host')
+                         ->where('app.appid = channel.appid')
+                         ->where('app.appid', '=', $appid)
+                // ->where("app.domain", "=", $this->request->rootdomain())
+                         ->where('channel.url', '=', $url)
+                         ->order('channel.displayorder')
+                // ->cache($this->authority->expire)
+                         ->find();
 
-                if (!empty($channel)) {
-                    if ($cache) {
-                        Cache::set($cacheKey, $channel, $this->authority->expire);
-                    } else {
-                        Cache::delete($cacheKey);
-                    }
-
-                    return $channel;
+            if (!empty($channel)) {
+                if ($cache) {
+                    Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
+                } else {
+                    Cache::delete($cacheKey);
                 }
-            } catch (DataNotFoundException $e) {
-                $this->authority->logcat('error', 'Channel::getChannel(DataNotFoundException)' . $e->getMessage());
-            } catch (ModelNotFoundException $e) {
-                $this->authority->logcat('error', 'Channel::getChannel(ModelNotFoundException)' . $e->getMessage());
-            } catch (DbException $e) {
-                $this->authority->logcat('error', 'Channel::getChannel(DbException)' . $e->getMessage());
+
+                return $channel;
             }
+
             self::runevent();
 
             return array();
@@ -116,7 +107,8 @@ class Channel {
         }
         Cache::delete($cacheKey);
         self::runevent();
-        $this->authority->logcat('error', 'Channel:getChannel(DataNotFoundException)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+        // $this->authority->logcat('error', 'Channel:getChannel(DataNotFoundException)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
         return array();
     }
@@ -124,36 +116,18 @@ class Channel {
     /**
      * 根据标识符获取频道信息
      *
+     * @param string $appid
+     * @param string $poolid
      * @param string $identifier
-     * @param        $poolid
-     * @param        $appid
      * @param bool   $cache
      *
      * @return array|mixed|\think\Model
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getIdentifier($appid, $poolid, string $identifier, $cache = true) {
-        $cacheKey = 'AuthUnion:identifier';
-        if (empty($appid)) {
-            $this->authority->logcat('error', 'Channel::getIdentifier(无效的AppId)');
-
-            return array();
-        }
-        $cacheKey .= ':appid:' . $appid;
-
-        if (empty($poolid)) {
-            $this->authority->logcat('error', 'Channel::getIdentifier(无效的用户池ID)');
-
-            return array();
-        }
-        $cacheKey .= ':poolid:' . $poolid;
-
-        if (empty($identifier)) {
-            $this->authority->logcat('error', 'Channel::getIdentifier(无效的频道标识符)');
-
-            return array();
-        }
-
-        $cacheKey .= ':identifier:' . $identifier;
+    public static function getIdentifier(string $appid, string $poolid, string $identifier, $cache = true) {
+        $cacheKey = 'AuthUnion:identifier:appid:' . $appid . ':poolid:' . $poolid . ':identifier:' . $identifier;
         // TODO：临时关闭缓存
         if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
@@ -164,33 +138,25 @@ class Channel {
         }
 
         if (Config::get('auth.level', 'slave') == 'master') {
-            try {
-                $channel = Db::name('app_channel')
-                             ->field(true)
-                             ->where('poolid', '=', $poolid)
-                             ->where('appid', '=', $appid)
-                             ->where('identifier', '=', $identifier)
-                             ->order('displayorder')
-                    // ->cache($this->authority->expire)
-                             ->find();
+            $channel = Db::name('app_channel')
+                         ->field(true)
+                         ->where('poolid', '=', $poolid)
+                         ->where('appid', '=', $appid)
+                         ->where('identifier', '=', $identifier)
+                         ->order('displayorder')
+                // ->cache($this->authority->expire)
+                         ->find();
 
-                if (!empty($channel)) {
-                    if ($cache) {
-                        // Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
-                    } else {
-                        // Cache::delete($cacheKey);
-                    }
-
-                    return $channel;
+            if (!empty($channel)) {
+                if ($cache) {
+                    // Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
+                } else {
+                    // Cache::delete($cacheKey);
                 }
-                $this->authority->logcat('error', 'Channel::getIdentifier(Data Not Found)');
-            } catch (DataNotFoundException $e) {
-                $this->authority->logcat('error', 'Channel::getIdentifier(DataNotFoundException)' . $e->getMessage());
-            } catch (ModelNotFoundException $e) {
-                $this->authority->logcat('error', 'Channel::getIdentifier(ModelNotFoundException)' . $e->getMessage());
-            } catch (DbException $e) {
-                $this->authority->logcat('error', 'Channel::getIdentifier(DbException)' . $e->getMessage());
+
+                return $channel;
             }
+
             self::runevent();
 
             return array();
@@ -208,13 +174,11 @@ class Channel {
             if ($cache) {
                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
                 // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
-            } else {
-                // Cache::delete($cacheKey);
             }
 
             return $result['data'];
         }
-        $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
         Cache::delete($cacheKey);
         self::runevent();
@@ -232,18 +196,17 @@ class Channel {
      * @param bool   $cache
      *
      * @return array|mixed|\think\Model
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getAccess(string $appid, string $poolid, int $channelid, $roleid = 404, $cache = true) {
+    public static function getAccess(string $appid, string $poolid, int $channelid, $roleid = 404, $cache = true) {
         if (empty($appid)) {
             $appid = Request::param('appid', Config::get("auth.appid"));
         }
 
         if (empty($poolid)) {
             $poolid = Request::param('poolid', Config::get("auth.poolid"));
-        }
-
-        if (empty($roleid)) {
-            $roleid = Session::get('union.roleid', 404);
         }
 
         if (empty($channelid)) {
@@ -259,30 +222,22 @@ class Channel {
         }
 
         if (Config::get('auth.level', 'slave') == 'master') {
-            try {
-                $access = Db::name('access')
-                            ->field(true)
-                            ->where('appid', '=', $appid)
-                            ->where('poolid', '=', $poolid)
-                            ->where('channelid', '=', $channelid)
-                            ->where('roleid', '=', $roleid)
-                            ->order('subtime', 'desc')
-                    // ->cache($this->authority->expire)
-                            ->find();
+            $access = Db::name('access')
+                        ->field(true)
+                        ->where('appid', '=', $appid)
+                        ->where('poolid', '=', $poolid)
+                        ->where('channelid', '=', $channelid)
+                        ->where('roleid', '=', $roleid)
+                        ->order('subtime', 'desc')
+                // ->cache($this->authority->expire)
+                        ->find();
 
-                if (!empty($access)) {
-                    // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
-                    return $access;
-                }
-                $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)');
-                // Cache::delete($cacheKey);
-            } catch (DataNotFoundException $e) {
-                $this->authority->logcat('error', 'Channel::getAccess(DataNotFoundException)' . $e->getMessage());
-            } catch (ModelNotFoundException $e) {
-                $this->authority->logcat('error', 'Channel::getAccess(ModelNotFoundException)' . $e->getMessage());
-            } catch (DbException $e) {
-                $this->authority->logcat('error', 'Channel::getAccess(DbException)' . $e->getMessage());
+            if (!empty($access)) {
+                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                return $access;
             }
+            // $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)');
+            // Cache::delete($cacheKey);
 
             return array();
         }
@@ -304,7 +259,7 @@ class Channel {
 
             return $result['data'];
         }
-        $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
         return array();
@@ -316,31 +271,12 @@ class Channel {
      * @param string $appid
      * @param string $poolid
      * @param int    $roleid
-     * @param int    $status
      * @param bool   $cache
      *
      * @return array|mixed
      */
-    public function getWorkspace($appid = '', $poolid = '', $roleid = 404, $status = 1, $cache = true) {
-        $cacheKey = 'channel:workspace:';
-        if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
-        }
-        $cacheKey .= ':appid:' . $appid;
-
-        if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
-        }
-        $cacheKey .= ':poolid:' . $poolid;
-
-        if (empty($roleid)) {
-            $roleid = Session::get('union.roleid', 404);
-        }
-
-        if (empty($status)) {
-            $status = 1;
-        }
-        $cacheKey .= ':status:' . $status;
+    public static function getWorkspace(string $appid, string $poolid, $roleid = 404, $cache = true) {
+        $cacheKey = 'channel:workspace:appid:' . $appid . ':poolid:' . $poolid . ':roleid:' . $roleid;
 
         if (Cache::has($cacheKey) && $cache) {
             $workspace = Cache::get($cacheKey);
@@ -354,7 +290,6 @@ class Channel {
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('roleid', $roleid)
-                      ->appendData('status', $status)
                       ->appendData('cache', $cache ? 1 : 0)
                       ->toArray();
 
@@ -364,9 +299,11 @@ class Channel {
                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
             }
 
-            return $result['data'];
+            return $result['data'] ?? array();
         }
-        $this->authority->logcat('error', 'Channel::getWorkspace(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+        // $this->authority->logcat('error', 'Channel::getWorkspace(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
         Cache::delete($cacheKey);
 
         return array();

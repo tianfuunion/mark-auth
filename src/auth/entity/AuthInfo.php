@@ -27,5 +27,4 @@ final class AuthInfo {
     public static $static   = 'static';
     public static $abstract = 'abstract';
     public static $system   = 'system';
-
 }

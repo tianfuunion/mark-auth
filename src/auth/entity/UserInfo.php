@@ -47,7 +47,7 @@ final class UserInfo {
         return Db::name("user")
                  ->withoutField('password')
                  ->where($this->where)
-                 ->order("subtime asc")
+                 ->order("subtime")
                  ->find();
     }
 
@@ -65,7 +65,7 @@ final class UserInfo {
         return Db::name("user")
                  ->withoutField('password')
                  ->where($this->where)
-                 ->order("subtime asc")
+                 ->order("subtime")
                  ->select()
                  ->toArray();
     }

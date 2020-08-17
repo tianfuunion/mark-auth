@@ -63,7 +63,6 @@ final class Authorize {
      * @return array|bool|false|mixed|string|\think\response\Redirect
      */
     public static function dispenser($level = 'slave', $scope = '') {
-
         if ($level == 'master' && $scope != 'auth_union') {
             if (Os::isWeChat() && Config('auth.stores.wechat.status')) {
                 $sso = new WeChat(Authorize::getInstance(), $level);
@@ -121,22 +120,42 @@ final class Authorize {
      */
     public static function isUnion() {
         return self::isLogin()
-            && !empty(Session::get('union'))
-            && Session::get('union.unionid', 0) !== 0
-            && (Session::get('union.uuid', 0) !== 0 || Session::get('union.uid', 0) !== 0)
+            && Session::has('union') && !empty(Session::get('union'))
+            && Session::get('union.unionid', 0) != 0
+            && Session::get('union.uid', 0) != 0
             && Session::get('union.poolid', 1) == Config::get('auth.poolid', 0)
-            && Session::get('union.status', 0) !== 0
-            && Session::get('union.roleid', 0) !== 0;
+            && Session::get('union.roleid', 0) != 0
+            && Session::get('union.status', 0) != 0;
     }
 
     /**
-     * 验证是否为管理员
+     * 验证是否为系统管理员
      * 管理员为True
      * 其它人为False
      *
      * @return bool
      */
     public static function isAdmin() {
+        return self::isLogin() &&
+            Session::get(self::$isAdmin, 0) === 1
+            && (
+                Session::get('gid', 100) <= 10 ||
+                Session::get('union.gid', 100) <= 10 ||
+                Session::get('union.guid', 100) <= 10 ||
+
+                Session::get('union.roleid', 100) <= 10
+            );
+    }
+
+    /**
+     * 校验是否为管理者
+     *
+     * 管理者为True
+     * 其它人为False
+     *
+     * @return bool
+     */
+    public static function isManager() {
         return self::isLogin() &&
             Session::get(self::$isAdmin, 0) === 1
             && (

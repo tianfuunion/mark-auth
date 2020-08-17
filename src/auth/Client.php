@@ -158,6 +158,17 @@ class Client extends Sso {
                                 return $token;
                             }
                             break;
+                        default:
+                            Log::error('Client::getAccessToken(Invalid code, get code again)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                            return $this->getCode(
+                                Config::get('auth.appid'),
+                                Request::url(true),
+                                'code',
+                                'auth_union',
+                                md5(uniqid((string)time(), true))
+                            );
+                            break;
                     }
                 }
                 Log::error('Client::getAccessToken(Responsive Exception)' . json_encode($result, JSON_UNESCAPED_UNICODE));
