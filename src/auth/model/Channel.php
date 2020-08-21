@@ -315,8 +315,8 @@ class Channel {
      * TODO：可以用发送post消息的方式，将消息发送到消息中心
      *
      */
-    public function runevent() {
-        $this->taobao();
+    public static function runevent() {
+        self::taobao();
     }
 
     /**
@@ -324,7 +324,7 @@ class Channel {
      *
      * @return bool|mixed|string
      */
-    private function taobao() {
+    private static function taobao() {
         try {
             $ip = Os::getIpvs();
             $result = Curl::getInstance(true)
@@ -337,14 +337,14 @@ class Channel {
                 if ($result['code'] == 0) {
                     $remark .= implode('_', $result['data']) . " " . $ip;
                 } else {
-                    $this->authority->logcat('error', 'TaoBao IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                    // $this->authority->logcat('error', 'TaoBao IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-                    return $this->juhe();
+                    return self::juhe();
                 }
             } else {
-                $this->authority->logcat('error', 'TaoBao IP Info Error');
+                // $this->authority->logcat('error', 'TaoBao IP Info Error');
 
-                return $this->juhe();
+                return self::juhe();
             }
 
             $user = Db::name('user')
@@ -362,13 +362,13 @@ class Channel {
                 $remark
             );
 
-            $this->authority->logcat('error', 'Channel::taobao（运行预警：无效频道）' . json_encode(Request::server(), JSON_UNESCAPED_UNICODE));
+            // $this->authority->logcat('error', 'Channel::taobao（运行预警：无效频道）' . json_encode(Request::server(), JSON_UNESCAPED_UNICODE));
         } catch (DataNotFoundException $e) {
-            $this->authority->logcat('error', "Channel::taobao(DataNotFoundException)" . $e->getMessage());
+            // $this->authority->logcat('error', "Channel::taobao(DataNotFoundException)" . $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            $this->authority->logcat('error', "Channel::taobao(ModelNotFoundException)" . $e->getMessage());
+            // $this->authority->logcat('error', "Channel::taobao(ModelNotFoundException)" . $e->getMessage());
         } catch (DbException $e) {
-            $this->authority->logcat('error', "Channel::taobao(DbException)" . $e->getMessage());
+            // $this->authority->logcat('error', "Channel::taobao(DbException)" . $e->getMessage());
         }
 
         return false;
@@ -379,7 +379,7 @@ class Channel {
      *
      * @return bool|mixed|string
      */
-    private function juhe() {
+    private static function juhe() {
         try {
             $ip = Os::getIpvs();
             $result = Curl::getInstance(true)
@@ -390,10 +390,10 @@ class Channel {
                 if ($result['resultcode'] == 200) {
                     $remark .= implode('_', $result['result']) . " " . $ip;
                 } else {
-                    $this->authority->logcat('error', 'juhe IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                    // $this->authority->logcat('error', 'juhe IP Info Warning ' . json_encode($result, JSON_UNESCAPED_UNICODE));
                 }
             } else {
-                $this->authority->logcat('error', 'juhe IP Info Error');
+                // $this->authority->logcat('error', 'juhe IP Info Error');
             }
 
             $user = Db::name('user')
@@ -401,7 +401,7 @@ class Channel {
                       ->where('uid', '=', 12)
                       ->find();
 
-            $this->authority->logcat('error', 'Channel::Runevent（Channel：运行预警：无效频道）' . json_encode(Request::server(), JSON_UNESCAPED_UNICODE));
+            // $this->authority->logcat('error', 'Channel::Runevent（Channel：运行预警：无效频道）' . json_encode(Request::server(), JSON_UNESCAPED_UNICODE));
 
             return Notice::runevent(
                 $user['wxid'],
@@ -414,11 +414,11 @@ class Channel {
                 $remark
             );
         } catch (DataNotFoundException $e) {
-            $this->authority->logcat('error', "Channel::juhe(DataNotFoundException)" . $e->getMessage());
+            // $this->authority->logcat('error', "Channel::juhe(DataNotFoundException)" . $e->getMessage());
         } catch (ModelNotFoundException $e) {
-            $this->authority->logcat('error', "Channel::juhe(ModelNotFoundException)" . $e->getMessage());
+            // $this->authority->logcat('error', "Channel::juhe(ModelNotFoundException)" . $e->getMessage());
         } catch (DbException $e) {
-            $this->authority->logcat('error', "Channel::juhe(DbException)" . $e->getMessage());
+            // $this->authority->logcat('error', "Channel::juhe(DbException)" . $e->getMessage());
         }
 
         return false;

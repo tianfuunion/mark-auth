@@ -129,6 +129,38 @@ final class Authorize {
     }
 
     /**
+     * 校验是否为组织
+     *
+     * @return bool
+     */
+    public static function isOrganize() {
+        return self::isUnion()
+            && Session::has('union') && !empty(Session::get('union'))
+            && Session::get('union.unionid', 0) != 0
+            && Session::get('union.uid', 0) != 0
+            && Session::get('union.poolid', 1) == Config::get('auth.poolid', 0)
+            && Session::get('union.roleid', 0) != 0
+            && Session::get('union.status', 0) != 0
+            && Session::get('union.organize') && Session::get('union.organize.orgid', 0) != 0;
+    }
+
+    /**
+     * 校验是否为门店
+     *
+     * @return bool
+     */
+    public static function isStore() {
+        return self::isUnion()
+            && Session::has('union') && !empty(Session::get('union'))
+            && Session::get('union.unionid', 0) != 0
+            && Session::get('union.uid', 0) != 0
+            && Session::get('union.poolid', 1) == Config::get('auth.poolid', 0)
+            && Session::get('union.roleid', 0) != 0
+            && Session::get('union.status', 0) != 0
+            && Session::get('union.store') && Session::get('union.store.storeid', 0) != 0;
+    }
+
+    /**
      * 验证是否为系统管理员
      * 管理员为True
      * 其它人为False
