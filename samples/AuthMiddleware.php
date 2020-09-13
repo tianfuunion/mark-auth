@@ -13,17 +13,13 @@ use think\Response;
 use think\facade\Cache;
 use think\facade\Config;
 use think\facade\Cookie;
-use think\facade\Db;
 use think\facade\Log;
 use think\facade\View;
-
-use think\db\exception\DataNotFoundException;
-use think\db\exception\ModelNotFoundException;
-use think\db\exception\DbException;
 
 use mark\auth\Authorize;
 use mark\auth\middleware\Authority;
 use mark\response\Responsive;
+use mark\system\Os;
 
 /**
  * Class AuthCheck
@@ -62,8 +58,6 @@ class AuthMiddleware extends Authority {
 
     /**
      * Session初始化
-     *
-     * @access public
      *
      * @param Request $request
      * @param Closure $next
@@ -247,23 +241,13 @@ class AuthMiddleware extends Authority {
     /**
      * 验证频道
      *
+     * @param string $identifier
+     *
      * @return bool
      */
-    protected function has_channel(): bool {
-        try {
-            $channel = Db::name('app_channel')
-                         ->field(true)
-                         ->where('url', '=', rtrim($this->request->server('request_uri'), "/"))
-                         ->cache(false)
-                         ->find();
-            if (!empty($channel)) {
-                $data['channel'] = $channel;
-
-                return true;
-            }
-        } catch (DataNotFoundException $e) {
-        } catch (ModelNotFoundException $e) {
-        } catch (DbException $e) {
+    protected function has_channel(string $identifier): bool {
+        if (!empty($identifier)) {
+            return true;
         }
 
         return false;
@@ -334,7 +318,7 @@ class AuthMiddleware extends Authority {
             $this->session->set('user_info', $userInfo);
         }
         foreach ($userInfo as $key => $item) {
-            if ($key == 'avatar') {
+            if ($key === 'avatar') {
                 $this->session->set($key, basename($item));
                 Cookie::set($key, basename($item));
             } else {
@@ -346,14 +330,14 @@ class AuthMiddleware extends Authority {
         }
 
         $this->session->delete('password');
-        $this->session->set('login', 1);
-        $this->session->set('isLogin', 1);
-        $this->session->set('expiretime', time() + Config::get('auth.expire', 1440));
+        $this->session->set(Authorize::$login, 1);
+        $this->session->set(Authorize::$isLogin, 1);
+        $this->session->set(Authorize::$expiretime, $this->request->time() + Config::get('auth.expire', 1440));
 
         Cookie::delete('password');
-        Cookie::set("login", "1");
-        Cookie::set("isLogin", "1");
-        Cookie::set('expiretime', (string)(time() + (int)Config::get('auth.expire', 1440)));
+        Cookie::set(Authorize::$login, "1");
+        Cookie::set(Authorize::$isLogin, "1");
+        Cookie::set(Authorize::$expiretime, (string)($this->request->time() + (int)Config::get('auth.expire', 1440)));
         Cookie::set("TF_Cookie", $this->session->getId(), array('domain' => "tianfu.ink"));
     }
 
@@ -377,7 +361,8 @@ class AuthMiddleware extends Authority {
     public function end(Response $response) {
         $this->logcat(
             'debug',
-            'AuthMiddleware:'
+            "\nAuthMiddleware:"
+            . "\nAgent：" . Os::getAgent()
             . "\nFile：" . __FILE__
             . "\nDir：" . __DIR__
             . "\nNameSpace：" . __NAMESPACE__
@@ -408,6 +393,7 @@ class AuthMiddleware extends Authority {
             . "\nurl：" . $this->request->url()
             . "\nurl：" . $this->request->url(true)
             . "\nRequest:" . json_encode($this->request->param(), JSON_UNESCAPED_UNICODE)
+            . "\n"
         );
     }
 

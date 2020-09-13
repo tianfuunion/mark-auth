@@ -55,6 +55,7 @@ class Client extends Sso {
         }
 
         // TODO：这里已经获取到OpenId,可检查是否注册过，未注册则再申请UserInfo
+        // TODO：获取OpenID后，检查是否注册过。可选择绑定帐号或者注册新帐号
         //4、第四步：拉取用户信息(需scope为 auth_userinfo)
         $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], Config::get('lang.default_lang'));
         if (!empty($userInfo) && !empty($userInfo['openid'])) {
@@ -198,7 +199,7 @@ class Client extends Sso {
      * @param string $appid         公众号的唯一标识
      * @param string $refresh_token 填写通过access_token获取到的refresh_token参数
      *
-     * @return array|bool|false
+     * @return array
      * @link    https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#2
      */
     public function refreshToken(string $appid, string $refresh_token) {
@@ -221,7 +222,7 @@ class Client extends Sso {
             return $token;
         }
 
-        return false;
+        return array();
     }
 
     /**

@@ -19,6 +19,8 @@ final class Authorize {
     public static $isLogin    = 'isLogin';
     public static $isAdmin    = 'isAdmin';
     public static $isTesting  = 'isTesting';
+    public static $isManager  = 'isManager';
+    public static $isOrganize = 'isOrganize';
 
     private function __construct() {
     }
@@ -141,7 +143,8 @@ final class Authorize {
             && Session::get('union.poolid', 1) == Config::get('auth.poolid', 0)
             && Session::get('union.roleid', 0) != 0
             && Session::get('union.status', 0) != 0
-            && Session::get('union.organize') && Session::get('union.organize.orgid', 0) != 0;
+            && Session::get('union.organize')
+            && Session::get('union.organize.orgid', 0) != 0;
     }
 
     /**
@@ -167,15 +170,14 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isAdmin() {
-        return self::isLogin() &&
-            Session::get(self::$isAdmin, 0) === 1
+    public static function isAdmin($val = array()) {
+        return self::isLogin() && Session::get(self::$isAdmin, 0) === 1
             && (
-                Session::get('gid', 100) <= 10 ||
-                Session::get('union.gid', 100) <= 10 ||
-                Session::get('union.guid', 100) <= 10 ||
+                Session::get('gid', 200) <= 10 ||
+                Session::get('union.gid', 200) <= 10 ||
+                Session::get('union.guid', 200) <= 10 ||
 
-                Session::get('union.roleid', 100) <= 10
+                Session::get('union.roleid', 200) <= 10
             );
     }
 
@@ -188,14 +190,13 @@ final class Authorize {
      * @return bool
      */
     public static function isManager() {
-        return self::isLogin() &&
-            Session::get(self::$isAdmin, 0) === 1
+        return self::isLogin() && Session::get(self::$isAdmin, 0) === 1
             && (
-                Session::get('gid', 100) <= 10 ||
-                Session::get('union.gid', 100) <= 10 ||
-                Session::get('union.guid', 100) <= 10 ||
+                Session::get('gid', 200) <= 10 ||
+                Session::get('union.gid', 200) <= 10 ||
+                Session::get('union.guid', 200) <= 10 ||
 
-                Session::get('union.roleid', 100) <= 10
+                Session::get('union.roleid', 200) <= 10
             );
     }
 
@@ -207,9 +208,7 @@ final class Authorize {
      * @return bool
      */
     public static function isTesting() {
-        return self::isLogin() &&
-            Session::get(self::$isTesting, 0) === 1 &&
-            Session::get('union.roleid', 0) === 340;
+        return self::isLogin() && Session::get(self::$isTesting, 0) === 1 && Session::get('union.roleid', 200) === 340;
     }
 
     /**

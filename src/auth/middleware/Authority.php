@@ -89,6 +89,9 @@ abstract class Authority {
      * 权限验证处理器
      *
      * @return array|bool|false|mixed|string|\think\response\Redirect
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
     protected final function handler() {
         // 初始化
@@ -114,11 +117,15 @@ abstract class Authority {
 
         /**
          * @todo 排除自定义标识符：存在Bug，以下情况可能会排除
-         * {auth:index:index = index:index}
          */
         if (!empty($ignore) && is_array($ignore)) {
+            if (in_array($identifier, $ignore)) {
+                $this->logcat('info', '排除自定义标识符：' . $identifier);
+
+                return $this->response('', 200, '', '', 'json');
+            }
             foreach ($ignore as $key => $item) {
-                if (stripos($identifier, $item) !== false) {
+                if (stripos($identifier, $item) !== false || strcasecmp($identifier, $item) === 0) {
                     $this->logcat('info', '排除自定义标识符：' . $identifier . ' = ' . $item);
 
                     return $this->response('', 200, '', '', 'json');
@@ -348,13 +355,16 @@ abstract class Authority {
     private function internalIgnore(): array {
         return array_merge(
             $this->getIgnore(), array('/',
-                                      'index:index', 'index:index:index',
-                                      'portal:*', 'portal:index',
-                                      'captcha', 'captcha:index',
+                                      'index:*', 'index:index:index', "index.htm", "index.html", "index.php",
+                                      'portal:*', 'portal:index:index', "portal.htm", "portal.html", "portal.php",
+
+                                      'captcha:*', '*:captcha:*', 'captcha:index:index',
 
                                       "favicon.ico", "rotobs.txt",
 
-                                      '404', '502')
+                                      "404.htm", "404.html",
+                                      "502.htm", "502.html"
+                              )
         );
     }
 
@@ -381,9 +391,11 @@ abstract class Authority {
     /**
      * 验证频道
      *
+     * @param string $identifier
+     *
      * @return bool
      */
-    protected abstract function has_channel(): bool;
+    protected abstract function has_channel(string $identifier): bool;
 
     /**
      *验证角色

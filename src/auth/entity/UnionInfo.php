@@ -9,26 +9,19 @@ use think\facade\Config;
 use think\facade\Cache;
 use mark\http\Curl;
 
-final class RoleInfo {
+final class UnionInfo {
 
     /**
-     * 获取角色详情
+     * 获取授权详情
      *
      * @param        $id
-     * @param string $openid
      * @param string $appid
      * @param string $poolid
      * @param bool   $cache
      *
      * @return array
      */
-    public static function find($id, string $openid, string $appid, string $poolid, $cache = true): array {
-        if (empty($id)) {
-            return array();
-        }
-        if (empty($openid)) {
-            return array();
-        }
+    public static function find($id, string $appid, string $poolid, $cache = true): array {
         if (empty($appid)) {
             $appid = Request::param('appid', Config::get("auth.appid"));
         }
@@ -37,21 +30,20 @@ final class RoleInfo {
             $poolid = Request::param('poolid', Config::get("auth.poolid"));
         }
 
-        $cacheKey = 'AuthUnion:roleinfo:appid:' . $appid . ':poolid:' . $poolid . ':id:' . $id;
+        $cacheKey = 'AuthUnion:unioninfo:appid:' . $appid . ':poolid:' . $poolid . ':id:' . $id;
         if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
-            $role = Cache::get($cacheKey);
-            if (!empty($role)) {
-                // return $role;
+            $union = Cache::get($cacheKey);
+            if (!empty($union)) {
+                // return $union;
             }
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_info', 'json')
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_find', 'json')
                       ->appendData('id', $id)
-                      ->appendData('openid', $openid)
-                      ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
+                      ->appendData('appid', $appid)
                       ->appendData('cache', $cache)
                       ->toArray();
 
@@ -63,14 +55,14 @@ final class RoleInfo {
 
             return $result['data'];
         }
-        // $this->authority->logcat('error', 'RoleInfo::getRoleInfo(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'RoleInfo::find(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
         return array();
     }
 
     /**
-     * 获取角色列表
+     * 获取授权列表
      *
      * @param string $appid
      * @param string $poolid
@@ -78,10 +70,7 @@ final class RoleInfo {
      *
      * @return array
      */
-    public static function select(string $openid, string $appid, string $poolid, $cache = true): array {
-        if (empty($openid)) {
-            return array();
-        }
+    public static function select(string $appid, string $poolid, $cache = true): array {
         if (empty($appid)) {
             $appid = Request::param('appid', Config::get("auth.appid"));
         }
@@ -90,19 +79,18 @@ final class RoleInfo {
             $poolid = Request::param('poolid', Config::get("auth.poolid"));
         }
 
-        $cacheKey = 'AuthUnion:rolelist:appid:' . $appid . ':poolid:' . $poolid;
+        $cacheKey = 'AuthUnion:unionlist:appid:' . $appid . ':poolid:' . $poolid;
         // TODO：临时关闭缓存
         if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
-            $roles = Cache::get($cacheKey);
-            if (!empty($roles)) {
-                // return $roles;
+            $unions = Cache::get($cacheKey);
+            if (!empty($unions)) {
+                // return $unions;
             }
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_list', 'json')
-                      ->appendData('openid', $openid)
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_select', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('cache', $cache)
@@ -116,24 +104,24 @@ final class RoleInfo {
 
             return $result['data'];
         }
-        // $this->authority->logcat('error', 'Role::getRoleList(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'union::getunionList(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
         return array();
     }
 
     /**
-     * 添加角色信息
+     * 添加授权信息
      *
-     * @param array  $role
+     * @param array  $union
      * @param string $openid
      * @param string $appid
      * @param string $poolid
      *
      * @return int
      */
-    public static function insert(array $role, string $openid, string $appid, string $poolid): int {
-        if (empty($role)) {
+    public static function insert(array $union, string $openid, string $appid, string $poolid): int {
+        if (empty($union)) {
             return 0;
         }
         if (empty($openid)) {
@@ -148,8 +136,8 @@ final class RoleInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_insert', 'json')
-                      ->appendData('role', $role)
+                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_insert', 'json')
+                      ->appendData('union', $union)
                       ->appendData('openid', $openid)
                       ->appendData('poolid', $poolid)
                       ->appendData('appid', $appid)
@@ -160,12 +148,13 @@ final class RoleInfo {
             return $result['data'];
         }
 
-        // $this->authority->logcat('error', 'RoleInfo::getRoleInfo(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'UnionInfo::insert(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
         return 0;
     }
 
     /**
-     * 更新角色信息
+     * 更新授权信息
      *
      * @param        $id
      * @param string $openid
@@ -190,7 +179,7 @@ final class RoleInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_update', 'json')
+                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_update', 'json')
                       ->appendData('id', $id)
                       ->appendData('openid', $openid)
                       ->appendData('poolid', $poolid)
@@ -202,12 +191,13 @@ final class RoleInfo {
             return $result['data'];
         }
 
-        // $this->authority->logcat('error', 'RoleInfo::getRoleInfo(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'UnionInfo::update(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
         return 0;
     }
 
     /**
-     * 删除角色信息
+     * 删除授权信息
      *
      * @param        $id
      * @param string $openid
@@ -232,7 +222,7 @@ final class RoleInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_delete', 'json')
+                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_delete', 'json')
                       ->appendData('id', $id)
                       ->appendData('openid', $openid)
                       ->appendData('poolid', $poolid)
@@ -243,7 +233,7 @@ final class RoleInfo {
             return $result['data'];
         }
 
-        // $this->authority->logcat('error', 'RoleInfo::getRoleInfo(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
+        // $this->authority->logcat('error', 'UnionInfo::delete(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         return 0;
     }
 
