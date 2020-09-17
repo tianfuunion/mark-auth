@@ -20,55 +20,111 @@ use Psr\SimpleCache\CacheInterface;
  *
  * @package mark\auth\middleware
  */
-abstract class Authority {
+abstract class Authority implements CacheInterface {
 
-    public $appid  = '';
-    public $poolid = '';
-    public $debug  = false;
     /**
-     * @var CacheInterface
+     * @var string
      */
-    public $cache;
+    private $appid = '';
+    /**
+     * @var string
+     */
+    private $poolid = '';
+    /**
+     * @var string
+     */
+    private $secret = '';
+    /**
+     * @var string
+     */
+    private $lang = 'zh-cn';
+    /**
+     * @var bool
+     */
+    private $debug = false;
+    /**
+     * @var int
+     */
+    private $expire = 1440;
 
-    public $expire = 1440;
-
-    public $channel;
+    /**
+     * @var \mark\auth\model\Channel
+     */
+    private $channel;
 
     /**
      * @var array
      */
-    protected $config;
+    private $config;
 
     public function __construct() {
         $this->logcat('info', 'Authority::construct(' . Os::getAgent() . ')');
+        Authorize::setCache($this);
         $this->channel = new Channel($this);
+
     }
 
+    /**
+     * @param $appid
+     *
+     * @return $this
+     */
     protected final function setAppId($appid): Authority {
         $this->appid = $appid;
 
         return $this;
     }
 
+    /**
+     * @param $poolid
+     *
+     * @return $this
+     */
     protected final function setPoolId($poolid): Authority {
         $this->poolid = $poolid;
 
         return $this;
     }
 
-    protected final function setDebug($debug): Authority {
+    /**
+     * @param string $secret
+     *
+     * @return $this
+     */
+    protected final function setSecret(string $secret): Authority {
+        $this->secret = $secret;
+
+        return $this;
+    }
+
+    /**
+     * @param string $lang
+     *
+     * @return $this
+     */
+    protected final function setLang(string $lang = 'zh-cn'): Authority {
+        $this->lang = $lang;
+
+        return $this;
+    }
+
+    /**
+     * @param bool $debug
+     *
+     * @return $this
+     */
+    protected final function setDebug(bool $debug): Authority {
         $this->debug = $debug;
 
         return $this;
     }
 
-    protected final function setCache(CacheInterface $cache): Authority {
-        $this->cache = $cache;
-
-        return $this;
-    }
-
-    protected final function setExpire($expire): Authority {
+    /**
+     * @param int $expire
+     *
+     * @return $this
+     */
+    protected final function setExpire(int $expire): Authority {
         $this->expire = $expire;
 
         return $this;
@@ -98,17 +154,18 @@ abstract class Authority {
         $this->initialize();
 
         /**
-         * @todo：2、排除自定义排除项,随后数据来源可从数据库中获取
+         * @todo：1、获取频道标示符
          */
-        $ignore = $this->internalIgnore();
         $identifier = $this->getInternalIdentifier();
-
         if (empty($identifier)) {
             $this->logcat('error', '无效的频道标识符：' . $identifier);
 
             return $this->response($identifier, 404, '', '无效的频道标识符', 'json');
         }
 
+        /**
+         * @todo 2、排除自定义标识符：存在Bug，以下情况可能会排除
+         */
         if ($this->has_exclude($identifier)) {
             $this->logcat('info', '自定义排除算法：' . $identifier);
 
@@ -116,55 +173,36 @@ abstract class Authority {
         }
 
         /**
-         * @todo 排除自定义标识符：存在Bug，以下情况可能会排除
+         * @todo 3、校验标识符，校验频道状态
          */
-        if (!empty($ignore) && is_array($ignore)) {
-            if (in_array($identifier, $ignore)) {
-                $this->logcat('info', '排除自定义标识符：' . $identifier);
-
-                return $this->response('', 200, '', '', 'json');
-            }
-            foreach ($ignore as $key => $item) {
-                if (stripos($identifier, $item) !== false || strcasecmp($identifier, $item) === 0) {
-                    $this->logcat('info', '排除自定义标识符：' . $identifier . ' = ' . $item);
-
-                    return $this->response('', 200, '', '', 'json');
-                    break;
-                }
-            }
-        }
-
-        /**
-         * @todo 2、校验标识符，校验频道状态
-         */
-        $channel = Channel::getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
+        $channel = $this->channel->getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
 
         if (empty($channel)) {
             $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
-            $channel = Channel::getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
+            $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
         /**
-         * @todo 3、管理员或测试员 不检查频道状态
+         * @todo 4、管理员或测试员 不检查频道状态
          */
         if (Authorize::isAdmin() || Authorize::isTesting()) {
             $this->logcat('debug', 'Authority::handler(Check Super Manager has Channel privileges)' . $identifier);
         }
 
-        if (empty($channel) || !isset($channel['channelid']) || empty($channel['channelid']) || !isset($channel['status']) || empty($channel['status'])) {
+        if (empty($channel) || !isset($channel['channelid']) || empty($channel['channelid'])) {
             $this->logcat('error', 'Authority::handler(404 无效的频道信息)' . $identifier);
 
             return $this->response('', 404, 'Invalid Channel information ', '无效的频道信息');
         }
-        if (!isset($channel['status']) || $channel['status'] != 1) {
+        if (!isset($channel['status']) || empty($channel['status']) || $channel['status'] != 1) {
             $this->logcat('error', 'Authority::handler(410 该频道尚未启用)' . $identifier);
 
             return $this->response('', 410, 'Channel information not available', '该频道尚未启用');
         }
 
         /**
-         * @todo 4、检查频道是否需要权限检查：公开页面，无需检查
+         * @todo 5、检查频道是否需要权限检查：公开页面，无需检查
          */
         if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$public) {
             $this->logcat('info', '公开页面，无需检查：' . $identifier);
@@ -173,7 +211,7 @@ abstract class Authority {
         }
 
         /**
-         * @todo 5、校验异步请求
+         * @todo 6、校验异步请求
          */
         if (!Authorize::isLogin()) {
             if (is_ajax() || is_pjax()) {
@@ -191,11 +229,24 @@ abstract class Authority {
             if (Config::get('auth.level', 'slave') == 'master') {
                 $this->logcat('debug', 'Authority::Redirect(Unauthorized 302 登录请求)');
                 // $response = Authorize::request(true);
-                $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
+                // $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
 
-                return $this->response($url, 302, 'Unauthorized', '登录请求');
+                // return $this->response($url, 302, 'Unauthorized', '登录请求');
             }
-            $result = Authorize::dispenser(Config::get('auth.level', 'slave'), 'auth_union');
+
+            // $result = Authorize::dispenser(Config::get('auth.level', 'slave'));
+            // $result = Authorize::dispenser(Config::get('auth.level', 'slave'), 'auth_union');
+            // $result = Authorize::getClient(Config::get('auth.level', 'slave'))->request('auth_base');
+            $result = Authorize::getClient(true)->authorize(
+                $this->appid,
+                $this->secret,
+                Request::url(true),
+                'code',
+                'auth_base',
+                '',
+                $this->lang
+            );
+
             $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
 
             if ($result instanceof Redirect) {
@@ -217,7 +268,7 @@ abstract class Authority {
         }
 
         /**
-         * @todo 6、检查频道是否需要权限检查：默认权限，仅登录即可
+         * @todo 7、检查频道是否需要权限检查：默认权限，仅登录即可
          */
         if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
             $this->logcat('info', '默认权限，仅登录即可：' . $identifier);
@@ -226,7 +277,7 @@ abstract class Authority {
         }
 
         /**
-         * @todo 7、其它状态的频道则需要*授权
+         * @todo 8、其它状态的频道则需要*授权
          */
         if (!Authorize::isUnion()) {
             // 获取联合授权
@@ -235,25 +286,23 @@ abstract class Authority {
 
                 return $this->response('', 407, 'Asyn Proxy Authentication Required', '异步请求需要授权认证', 'json');
             }
-            if (Config::get('auth.level', 'slave') == 'master') {
-                //@todo 临时机制，获取授权信息，
-                // $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
-                // return $this->response($url, 302, 'Unauthorized', '登录请求');
-            }
-            if (is_get() || Request::isGet()) {
-                $url = Config('auth.host') . '/auth.php/oauth2/authorize'
-                    . '?appid=' . $this->appid
-                    . '&poolid=' . $this->poolid
-                    . '&redirect_uri=' . urlencode(Request::url(true))
-                    . '&response_type=code'
-                    . '&scope=auth_union'
-                    . '&access_type=offline'
-                    . '&state=' . md5(uniqid((string)time(), true))
-                    . '#auth_redirect';
 
-                // TODO：临时请求
-                return $this->response($url, 302, 'Unauthorized', '登录请求');
-                // return Authorize::authentication($this->>appid, Request::url(true));
+            if (is_get() || Request::isGet()) {
+                $result = Authorize::getClient(true)->authorize(
+                    $this->appid,
+                    $this->secret,
+                    Request::url(true),
+                    'code',
+                    'auth_union',
+                    '',
+                    $this->lang
+                );
+
+                if ($result instanceof Redirect) {
+                    $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
+
+                    return $result;
+                }
             }
 
             $this->logcat('error', 'Authority::handler(Proxy Authentication Required)');
@@ -263,9 +312,9 @@ abstract class Authority {
         }
 
         /**
-         * @todo 8、校验授权信息
+         * @todo 9、校验授权信息
          */
-        $access = Channel::getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
+        $access = $this->channel->getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
 
         if (Authorize::isAdmin() || Authorize::isTesting()) {
             $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');
@@ -384,8 +433,9 @@ abstract class Authority {
      */
     protected function has_exclude(string $identifier): bool {
         $this->logcat('info', 'Authority::has_exclude(' . $identifier . ')');
+        $ignore = $this->internalIgnore();
 
-        return false;
+        return !empty($ignore) && is_array($ignore) && !empty($identifier) && in_array($identifier, $ignore);
     }
 
     /**
@@ -427,6 +477,15 @@ abstract class Authority {
      * @return mixed
      */
     protected abstract function redirect(string $url = '', int $code = 302);
+
+    /**
+     * OAuth2 获取到用户Openid后，由实现类存储
+     *
+     * @param string $openid
+     *
+     * @return bool
+     */
+    protected abstract function onOpenid(string $openid): bool;
 
     /**
      * OAuth2 获取到用户信息后，由实现类存储

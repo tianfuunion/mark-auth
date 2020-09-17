@@ -4,7 +4,6 @@ declare (strict_types=1);
 
 namespace mark\auth\model;
 
-use think\facade\Cache;
 use think\facade\Config;
 use think\facade\Db;
 use think\facade\Session;
@@ -39,26 +38,27 @@ class Channel {
      * @param string $url
      * @param bool   $cache
      *
-     * @return array|bool|false|string|\think\Model
+     * @return array|bool|false|mixed|string|\think\Model
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      * @deprecated
      */
-    public static function getChannel($appid = 0, $url = '', $cache = true) {
-        $cacheKey = 'AuthUnion:channel:appid:' . $appid;
-
+    public function getChannel($appid = 0, string $url = '', bool $cache = true) {
         if (empty($url)) {
             $url = Request::server('document_uri');
         }
-        $cacheKey .= ':domain:' . $url;
 
-        // TODO：临时关闭缓存
-        if (Cache::has($cacheKey) && $cache) {
-            // $channel = $this->authority->cache->get($cacheKey);
-            $channel = Cache::get($cacheKey);
+        $cacheKey = 'AuthUnion:channel:appid:' . $appid . ':domain:' . $url;
+
+        if ($this->authority->has($cacheKey) && $cache) {
+            // if (Cache::has($cacheKey) && $cache) {
+            $channel = $this->authority->get($cacheKey);
+            // $channel = Cache::get($cacheKey);
             if (!empty($channel)) {
-                // return $channel;
+                // TODO：临时关闭缓存
+                return $channel;
             }
         }
 
@@ -76,9 +76,11 @@ class Channel {
 
             if (!empty($channel)) {
                 if ($cache) {
-                    Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
+                    $this->authority->set($cacheKey, $channel, Config::get('session.expire', 1440));
+                    // Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
                 } else {
-                    Cache::delete($cacheKey);
+                    // Cache::delete($cacheKey);
+                    $this->authority->delete($cacheKey);
                 }
 
                 return $channel;
@@ -98,14 +100,17 @@ class Channel {
 
         if (!empty($result)) {
             if ($cache) {
-                Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result, Config::get('session.expire', 1440));
             } else {
-                Cache::delete($cacheKey);
+                // Cache::delete($cacheKey);
+                $this->authority->delete($cacheKey);
             }
 
             return $result;
         }
-        Cache::delete($cacheKey);
+        // Cache::delete($cacheKey);
+        $this->authority->delete($cacheKey);
         self::runevent();
 
         // $this->authority->logcat('error', 'Channel:getChannel(DataNotFoundException)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
@@ -122,18 +127,20 @@ class Channel {
      * @param bool   $cache
      *
      * @return array|mixed|\think\Model
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public static function getIdentifier(string $appid, string $poolid, string $identifier, $cache = true) {
+    public function getIdentifier(string $appid, string $poolid, string $identifier, bool $cache = true) {
         $cacheKey = 'AuthUnion:identifier:appid:' . $appid . ':poolid:' . $poolid . ':identifier:' . $identifier;
-        // TODO：临时关闭缓存
-        if (Cache::has($cacheKey) && $cache) {
-            // $result = $this->authority->cache->get($cacheKey);
-            $channel = Cache::get($cacheKey);
+        if ($this->authority->has($cacheKey) && $cache) {
+            // if (Cache::has($cacheKey) && $cache) {
+            $channel = $this->authority->get($cacheKey);
+            // $channel = Cache::get($cacheKey);
             if (!empty($channel)) {
-                // return $channel;
+                // TODO：临时关闭缓存
+                return $channel;
             }
         }
 
@@ -149,8 +156,10 @@ class Channel {
 
             if (!empty($channel)) {
                 if ($cache) {
+                    $this->authority->set($cacheKey, $channel, Config::get('session.expire', 1440));
                     // Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
                 } else {
+                    $this->authority->delete($cacheKey);
                     // Cache::delete($cacheKey);
                 }
 
@@ -172,15 +181,18 @@ class Channel {
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result['data'], Config::get('session.expire', 1440));
                 // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+            } else {
+                $this->authority->delete($cacheKey);
             }
 
             return $result['data'];
         }
         // $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-        Cache::delete($cacheKey);
+        // Cache::delete($cacheKey);
+        $this->authority->delete($cacheKey);
         self::runevent();
 
         return array();
@@ -196,17 +208,18 @@ class Channel {
      * @param bool   $cache
      *
      * @return array|mixed|\think\Model
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public static function getAccess(string $appid, string $poolid, int $channelid, $roleid = 404, $cache = true) {
+    public function getAccess(string $appid, string $poolid, int $channelid, int $roleid = 404, bool $cache = true) {
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return array();
         }
 
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return array();
         }
 
         if (empty($channelid)) {
@@ -214,10 +227,13 @@ class Channel {
         }
         $cacheKey = 'channel:access:appid:' . $appid . ':poolid:' . $poolid . ':channelid:' . $channelid . ':roleid:' . $roleid;
 
-        if (Cache::has($cacheKey) && $cache) {
-            $access = Cache::get($cacheKey);
+        if ($this->authority->has($cacheKey) && $cache) {
+            // if (Cache::has($cacheKey) && $cache) {
+            $access = $this->authority->get($cacheKey);
+            // $channel = Cache::get($cacheKey);
             if (!empty($access)) {
-                // return $access;
+                // TODO：临时关闭缓存
+                return $access;
             }
         }
 
@@ -233,11 +249,19 @@ class Channel {
                         ->find();
 
             if (!empty($access)) {
-                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                if ($cache) {
+                    $this->authority->set($cacheKey, $access, Config::get('session.expire', 1440));
+                    // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));"
+                } else {
+                    $this->authority->delete($cacheKey);
+                    // Cache::delete($cacheKey);
+                }
+
                 return $access;
             }
             // $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)');
             // Cache::delete($cacheKey);
+            $this->authority->delete($cacheKey);
 
             return array();
         }
@@ -248,19 +272,21 @@ class Channel {
                       ->appendData('poolid', $poolid)
                       ->appendData('channelid', $channelid)
                       ->appendData('roleid', $roleid)
-                      ->appendData('cache', $cache ? 1 : 0)
+                      ->appendData('cache', $cache)
                       ->toArray();
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
-                Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+                // Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+            } else {
+                $this->authority->delete($cacheKey);
             }
 
             return $result['data'];
         }
         // $this->authority->logcat('error', 'Channel::getAccess(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
-        Cache::delete($cacheKey);
+        $this->authority->delete($cacheKey);
 
         return array();
     }
@@ -273,15 +299,16 @@ class Channel {
      * @param int    $roleid
      * @param bool   $cache
      *
-     * @return array|mixed
+     * @return array
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public static function getWorkspace(string $appid, string $poolid, $roleid = 404, $cache = true) {
+    public function getWorkspace(string $appid, string $poolid, int $roleid = 404, bool $cache = true) {
         $cacheKey = 'channel:workspace:appid:' . $appid . ':poolid:' . $poolid . ':roleid:' . $roleid;
 
-        if (Cache::has($cacheKey) && $cache) {
-            $workspace = Cache::get($cacheKey);
+        if ($this->authority->has($cacheKey) && $cache) {
+            $workspace = $this->authority->get($cacheKey);
             if (!empty($workspace)) {
-                // return $workspace;
+                return $workspace;
             }
         }
 
@@ -290,14 +317,15 @@ class Channel {
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('roleid', $roleid)
-                      ->appendData('cache', $cache ? 1 : 0)
+                      ->appendData('cache', $cache)
                       ->appendData('version', '2')
                       ->toArray();
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                // Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
-                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+            } else {
+                $this->authority->delete($cacheKey);
             }
 
             return $result['data'] ?? array();
@@ -305,7 +333,7 @@ class Channel {
 
         // $this->authority->logcat('error', 'Channel::getWorkspace(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-        Cache::delete($cacheKey);
+        $this->authority->delete($cacheKey);
 
         return array();
     }
@@ -315,7 +343,7 @@ class Channel {
      * TODO：可以用发送post消息的方式，将消息发送到消息中心
      *
      */
-    public static function runevent() {
+    public function runevent() {
         self::taobao();
     }
 
@@ -324,7 +352,7 @@ class Channel {
      *
      * @return bool|mixed|string
      */
-    private static function taobao() {
+    private function taobao() {
         try {
             $ip = Os::getIpvs();
             $result = Curl::getInstance(true)
@@ -379,7 +407,7 @@ class Channel {
      *
      * @return bool|mixed|string
      */
-    private static function juhe() {
+    private function juhe() {
         try {
             $ip = Os::getIpvs();
             $result = Curl::getInstance(true)

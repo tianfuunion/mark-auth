@@ -4,7 +4,6 @@ declare (strict_types=1);
 
 namespace mark\auth\entity;
 
-use think\facade\Request;
 use think\facade\Config;
 use think\facade\Cache;
 use mark\http\Curl;
@@ -30,11 +29,10 @@ final class RoleInfo {
             return array();
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return array();
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return array();
         }
 
         $cacheKey = 'AuthUnion:roleinfo:appid:' . $appid . ':poolid:' . $poolid . ':id:' . $id;
@@ -72,6 +70,7 @@ final class RoleInfo {
     /**
      * 获取角色列表
      *
+     * @param string $openid
      * @param string $appid
      * @param string $poolid
      * @param bool   $cache
@@ -83,19 +82,18 @@ final class RoleInfo {
             return array();
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return array();
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return array();
         }
 
         $cacheKey = 'AuthUnion:rolelist:appid:' . $appid . ':poolid:' . $poolid;
-        // TODO：临时关闭缓存
         if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
             $roles = Cache::get($cacheKey);
             if (!empty($roles)) {
+                // TODO：临时关闭缓存
                 // return $roles;
             }
         }
@@ -140,11 +138,10 @@ final class RoleInfo {
             return 0;
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return 0;
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return 0;
         }
 
         $result = Curl::getInstance(true)
@@ -182,11 +179,10 @@ final class RoleInfo {
             return 0;
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return 0;
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return 0;
         }
 
         $result = Curl::getInstance(true)
@@ -224,11 +220,10 @@ final class RoleInfo {
             return 0;
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return 0;
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return 0;
         }
 
         $result = Curl::getInstance(true)

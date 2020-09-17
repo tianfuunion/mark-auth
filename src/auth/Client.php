@@ -66,6 +66,38 @@ class Client extends Sso {
         return false;
     }
 
+    public function authorize($appid, string $secret, string $redirect_uri, $response_type = 'code', $scope = 'auth_base', $state = '', $lang = 'zh-cn') {
+        // 1、第一步：用户同意授权，获取code
+        if (!Request::has("code", "get", true)) {
+            return $this->getCode(
+                $appid,
+                $redirect_uri,
+                $response_type ?: 'code',
+                $scope ?: 'auth_base',
+                $state ?: md5(uniqid((string)time(), true))
+            );
+        }
+
+        //2、第二步：通过code换取网页授权access_token
+        $token = $this->getAccessToken($appid, $secret, Request::get('code'));
+        if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
+
+            return false;
+        }
+
+        if ($scope === 'snsapi_base') {
+            // return $token;
+        }
+
+        //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
+        $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], $lang);
+        if (!empty($userInfo) && !empty($userInfo['openid'])) {
+            return $userInfo;
+        }
+
+        return false;
+    }
+
     /**
      * 第一步：用户同意授权，获取code
      * Authorize constructor.
@@ -86,14 +118,15 @@ class Client extends Sso {
      * @return \think\response\Redirect
      * @link         https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#0
      */
-    public function getCode(string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'auth_base', string $state = '') {
+    public function getCode($appid, string $redirect_uri, $response_type = 'code', $scope = 'auth_base', $state = '') {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink') . '/auth.php/oauth2/authorize'
             . '?appid=' . $appid
             . '&redirect_uri=' . urlencode($redirect_uri)
             . '&response_type=' . $response_type
             . '&scope=' . $scope
-            . '&state=' . ($state ?? md5(uniqid((string)time(), true)))
+            . '&access_type=offline'
             . '&view=authorize'
+            . '&state=' . ($state ?? md5(uniqid((string)time(), true)))
             . '#auth_redirect';
         Log::debug('Client::getCode(Url)' . $url);
 
@@ -271,13 +304,13 @@ class Client extends Sso {
                             $userinfo = $result['data'];
                             if (empty($userinfo)) {
                                 Log::error('Client::getUserInfo(UserInfo is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (!isset($userinfo['openid'])) {
+                            } elseif (!isset($userinfo['openid']) || empty($userinfo['openid'])) {
                                 Log::error('Client::getUserInfo(UserInfo.openid is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (!isset($userinfo['nickname'])) {
+                            } elseif (!isset($userinfo['nickname']) || empty($userinfo['nickname'])) {
                                 Log::error('Client::getUserInfo(UserInfo.nickname is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (!isset($userinfo['sex'])) {
+                            } elseif (!isset($userinfo['sex']) || empty($userinfo['sex'])) {
                                 Log::error('Client::getUserInfo(UserInfo.sex is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-                            } elseif (!isset($userinfo['avatar'])) {
+                            } elseif (!isset($userinfo['avatar']) || empty($userinfo['avatar'])) {
                                 Log::error('Client::getUserInfo(UserInfo.avatar is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
                             } else {
                                 return $userinfo;
@@ -343,7 +376,7 @@ class Client extends Sso {
      *
      * @return \think\response\Redirect
      */
-    public static function authentication(
+    public function authentication(
         string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'auth_base', $access_type = 'offline', string $state = ''
     ) {
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')

@@ -52,11 +52,60 @@ class WeChat extends Sso {
         }
 
         if ($scope === 'snsapi_base') {
-            return $token;
+            // return $token;
         }
 
         //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
         $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], Config::get('lang.default_lang'));
+        if (!empty($userInfo) && !empty($userInfo['openid'])) {
+            return $userInfo;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $appid
+     * @param string $secret
+     * @param string $redirect_uri
+     * @param string $response_type
+     * @param string $scope
+     * @param string $state
+     * @param string $lang
+     *
+     * @return array|bool|false|mixed|string|\think\response\Redirect
+     */
+    public function authorize(string $appid, string $secret, string $redirect_uri, $response_type = 'code', $scope = 'snsapi_base', $state = '', $lang = 'zh-cn') {
+
+        // 1、第一步：用户同意授权，获取code
+        if (!Request::has("code", "get", true)) {
+            $result = $this->getCode(
+                $appid,
+                $redirect_uri,
+                $response_type ?: 'code',
+                $scope == 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base',
+                $state ?: md5(uniqid((string)time(), true))
+            );
+            if ($result instanceof Redirect) {
+                return $result;
+            }
+
+            return false;
+        }
+
+        //2、第二步：通过code换取网页授权access_token
+        $token = $this->getAccessToken($appid, $secret, Request::get('code'));
+        if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
+
+            return false;
+        }
+
+        if ($scope === 'snsapi_base') {
+            // return $token;
+        }
+
+        //4、第四步：拉取用户信息(需scope为 snsapi_userinfo)
+        $userInfo = $this->getUserInfo($token['access_token'], $token['openid'], $lang);
         if (!empty($userInfo) && !empty($userInfo['openid'])) {
             return $userInfo;
         }
@@ -110,16 +159,27 @@ class WeChat extends Sso {
      * @param string $secret
      * @param string $code 用于换取access_token的code，微信提供
      *
-     * @return array|bool|false|string
+     * @return array|bool|false|mixed|string
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function getAccessToken(string $appid, string $secret, string $code) {
-        $url = 'https://api.weixin.qq.com/sns/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
+        $cacheKey = 'wechat:access_token:appid:' . $appid . ':secret:' . $secret;
 
+        if ($this->getCache()->has($cacheKey)) {
+            $token = $this->getCache()->get($cacheKey);
+            if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
+                return $token;
+            }
+        }
+
+        $url = 'https://api.weixin.qq.com/sns/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
         $token = Curl::getInstance(true)
                      ->get($url)
                      ->toArray();
 
         if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
+            $this->getCache()->set($cacheKey, $token, 7000);
+
             return $token;
         }
 

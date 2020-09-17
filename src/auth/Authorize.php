@@ -7,10 +7,7 @@ namespace mark\auth;
 use think\facade\Session;
 use think\facade\Config;
 use think\facade\Request;
-use mark\system\Os;
-use mark\auth\sso\driver\WeChat;
-use mark\auth\sso\driver\AliPay;
-use mark\auth\sso\driver\DingTalk;
+use Psr\SimpleCache\CacheInterface;
 
 final class Authorize {
 
@@ -36,24 +33,9 @@ final class Authorize {
     }
 
     /**
-     * 登录请求
-     *
-     * @param bool   $complete
-     * @param string $scope
-     *
-     * @return \think\response\Redirect
-     */
-    public static function request($complete = true, $scope = 'auth_base') {
-        $url = Config::get('auth.host') . '/auth.php/login/login?scope=' . $scope . '&callback=' . urlencode(Request::url($complete));
-        header('Location:' . $url);
-
-        return redirect($url);
-    }
-
-    /**
      * @var \mark\auth\Client
      */
-    public static $client;
+    private static $client;
 
     /**
      * 权限验证分发器
@@ -65,37 +47,38 @@ final class Authorize {
      * @return array|bool|false|mixed|string|\think\response\Redirect
      */
     public static function dispenser($level = 'slave', $scope = '') {
-        if ($level == 'master' && $scope != 'auth_union') {
-            if (Os::isWeChat() && Config('auth.stores.wechat.status')) {
-                $sso = new WeChat(Authorize::getInstance(), $level);
-
-                return $sso->request($scope == 'snsapi_userinfo' ? 'snsapi_userinfo' : 'snsapi_base');
-            }
-
-            if (Os::isAliPay() && Config('auth.stores.alipay.status')) {
-                $sso = new AliPay(Authorize::getInstance(), $level);
-
-                return $sso->request($scope);
-            }
-
-            if (Os::isDingTalk() && Config('auth.stores.dingtalk.status')) {
-                $sso = new DingTalk(Authorize::getInstance(), $level);
-
-                return $sso->request($scope);
-            }
-
+        if ($level == 'master') {
             return redirect(Config('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true)));
         }
 
-        return self::getClient($level)->request($scope);
+        return self::getClient(true)->request($scope);
     }
 
-    public static function getClient($level = 'slave') {
-        if (empty(self::$client) || !self::$client instanceof Client) {
-            self::$client = new Client(Authorize::getInstance(), $level);
+    public static function getClient(bool $complete = false) {
+        if (empty(self::$client) || !self::$client instanceof Client || $complete) {
+            self::$client = new Client(Authorize::getInstance());
         }
 
         return self::$client;
+    }
+
+    /**
+     * @var CacheInterface
+     */
+    private static $cache;
+
+    /**
+     * @param \Psr\SimpleCache\CacheInterface $cache
+     */
+    public static function setCache(CacheInterface $cache) {
+        self::$cache = $cache;
+    }
+
+    /**
+     * @return \Psr\SimpleCache\CacheInterface
+     */
+    public static function getCache() {
+        return self::$cache;
     }
 
     /**
@@ -105,7 +88,7 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isLogin() {
+    public static function isLogin($value = array()) {
         return
             Session::get(self::$login, 0) === 1
             && Session::get(self::$isLogin, 0) === 1
@@ -120,7 +103,7 @@ final class Authorize {
      * @TODO Union.Status 有待完善，具体有效数据
      * @return bool
      */
-    public static function isUnion() {
+    public static function isUnion($value = array()) {
         return self::isLogin()
             && Session::has('union') && !empty(Session::get('union'))
             && Session::get('union.unionid', 0) != 0
@@ -135,7 +118,7 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isOrganize() {
+    public static function isOrganize($value = array()) {
         return self::isUnion()
             && Session::has('union') && !empty(Session::get('union'))
             && Session::get('union.unionid', 0) != 0
@@ -152,7 +135,7 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isStore() {
+    public static function isStore($value = array()) {
         return self::isUnion()
             && Session::has('union') && !empty(Session::get('union'))
             && Session::get('union.unionid', 0) != 0
@@ -168,9 +151,11 @@ final class Authorize {
      * 管理员为True
      * 其它人为False
      *
+     * @param array $value
+     *
      * @return bool
      */
-    public static function isAdmin($val = array()) {
+    public static function isAdmin($value = array()) {
         return self::isLogin() && Session::get(self::$isAdmin, 0) === 1
             && (
                 Session::get('gid', 200) <= 10 ||
@@ -189,7 +174,7 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isManager() {
+    public static function isManager($value = array()) {
         return self::isLogin() && Session::get(self::$isAdmin, 0) === 1
             && (
                 Session::get('gid', 200) <= 10 ||
@@ -207,7 +192,7 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isTesting() {
+    public static function isTesting($value = array()) {
         return self::isLogin() && Session::get(self::$isTesting, 0) === 1 && Session::get('union.roleid', 200) === 340;
     }
 
@@ -218,7 +203,7 @@ final class Authorize {
      *
      * @return bool
      */
-    public static function isExpire() {
+    public static function isExpire($value = array()) {
         return Session::get(self::$expiretime, 0) < time();
     }
 
@@ -228,7 +213,7 @@ final class Authorize {
      *
      * @param $permissionid
      */
-    public static function hasPermission($permissionid = null) {
+    public static function hasPermission($permission = null) {
 
     }
 

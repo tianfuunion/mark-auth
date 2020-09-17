@@ -4,7 +4,6 @@ declare (strict_types=1);
 
 namespace mark\auth\entity;
 
-use think\facade\Request;
 use think\facade\Config;
 use think\facade\Cache;
 use mark\http\Curl;
@@ -22,12 +21,14 @@ final class UnionInfo {
      * @return array
      */
     public static function find($id, string $appid, string $poolid, $cache = true): array {
-        if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+        if (empty($id)) {
+            return array();
         }
-
+        if (empty($appid)) {
+            return array();
+        }
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return array();
         }
 
         $cacheKey = 'AuthUnion:unioninfo:appid:' . $appid . ':poolid:' . $poolid . ':id:' . $id;
@@ -72,19 +73,19 @@ final class UnionInfo {
      */
     public static function select(string $appid, string $poolid, $cache = true): array {
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return array();
         }
 
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return array();
         }
 
         $cacheKey = 'AuthUnion:unionlist:appid:' . $appid . ':poolid:' . $poolid;
-        // TODO：临时关闭缓存
         if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
             $unions = Cache::get($cacheKey);
             if (!empty($unions)) {
+                // TODO：临时关闭缓存
                 // return $unions;
             }
         }
@@ -128,11 +129,10 @@ final class UnionInfo {
             return 0;
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return 0;
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return 0;
         }
 
         $result = Curl::getInstance(true)
@@ -171,11 +171,10 @@ final class UnionInfo {
             return 0;
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return 0;
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return 0;
         }
 
         $result = Curl::getInstance(true)
@@ -214,11 +213,10 @@ final class UnionInfo {
             return 0;
         }
         if (empty($appid)) {
-            $appid = Request::param('appid', Config::get("auth.appid"));
+            return 0;
         }
-
         if (empty($poolid)) {
-            $poolid = Request::param('poolid', Config::get("auth.poolid"));
+            return 0;
         }
 
         $result = Curl::getInstance(true)
