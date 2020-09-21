@@ -78,13 +78,6 @@ class AuthMiddleware extends Authority {
         /** @var Response $response */
         // $response = $next($request);
 
-        /**
-         * @todo 排除验证码,临时办法
-         */
-        if (stripos($request->server('request_uri'), 'captcha') !== false || $request->server('request_uri') == '/') {
-            return $next($request);
-        }
-
         try {
             $result = parent::handler();
 
@@ -244,7 +237,7 @@ class AuthMiddleware extends Authority {
     protected function has_exclude(string $identifier): bool {
         $this->logcat('info', 'AuthMiddleware::has_exclude(' . $identifier . ')');
 
-        if (stripos($identifier, 'captcha') !== false || stripos($identifier, '/') !== false) {
+        if (stripos($this->request->server('request_uri'), 'captcha') !== false || $this->request->server('request_uri') == '/') {
             return true;
         }
 
