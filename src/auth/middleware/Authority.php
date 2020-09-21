@@ -37,20 +37,20 @@ abstract class Authority implements CacheInterface {
     /**
      * @var string
      */
-    private $lang = 'zh-cn';
+    protected $lang = 'zh-cn';
     /**
      * @var bool
      */
-    private $debug = false;
+    protected $debug = false;
     /**
      * @var int
      */
-    private $expire = 1440;
+    public $expire = 1440;
 
     /**
      * @var \mark\auth\model\Channel
      */
-    private $channel;
+    protected $channel;
 
     /**
      * @var array
@@ -61,7 +61,6 @@ abstract class Authority implements CacheInterface {
         $this->logcat('info', 'Authority::construct(' . Os::getAgent() . ')');
         Authorize::setCache($this);
         $this->channel = new Channel($this);
-
     }
 
     /**

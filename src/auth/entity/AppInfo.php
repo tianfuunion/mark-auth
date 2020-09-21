@@ -50,8 +50,8 @@ final class AppInfo {
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
-                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                 Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             }
 
             return $result['data'];

@@ -157,13 +157,13 @@ class Client extends Sso {
      */
     public function getAccessToken(string $appid, string $secret, string $code) {
         if (empty($appid)) {
-            $appid = Config::get('auth.appid');
+            return array();
         }
         if (empty($secret)) {
-            $secret = Config::get('auth.appsecret');
+            return array();
         }
         if (empty($code)) {
-            $code = Request::get('code');
+            return array();
         }
 
         $url = Config::get('auth.host', 'https://auth.tianfu.ink')
@@ -237,7 +237,7 @@ class Client extends Sso {
      */
     public function refreshToken(string $appid, string $refresh_token) {
         if (empty($appid)) {
-            $appid = Config::get('auth.appid');
+            return array();
         }
         if (empty($refresh_token)) {
             $refresh_token = Request::get('refresh_token');

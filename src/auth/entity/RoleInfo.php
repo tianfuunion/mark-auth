@@ -10,6 +10,24 @@ use mark\http\Curl;
 
 final class RoleInfo {
 
+    public static $level = array(
+        'admin'    => array('title' => '管理级', 'name' => '', 'describe' => '超级管理员'),
+        'system'   => array('title' => '系统级', 'name' => 'system', 'describe' => '由发通知，计划定时任务执行，机器人人'),
+        'testing'  => array('title' => '测试级', 'name' => '', 'describe' => '设计，开发，测试，维护'),
+        'manager'  => array('title' => '管理级', 'name' => '', 'describe' => '平台管理员'),
+        'organize' => array('title' => '组织级', 'name' => '', 'describe' => '组织级别，'),
+        'pool'     => array('title' => '用户池级', 'name' => '', 'describe' => '用户池级'),
+        'app'      => array('title' => '应用级', 'name' => '', 'describe' => '应用级'),
+
+        'default'  => array('title' => '默认', 'name' => 'default'),
+        'public'   => array('title' => '公开', 'name' => 'public'),
+        'proteced' => array('title' => '保护', 'name' => 'proteced'),
+        'private'  => array('title' => '私有', 'name' => 'private'),
+        'final'    => array('title' => '最终', 'name' => 'final'),
+        'static'   => array('title' => '静态', 'name' => 'static'),
+        'abstract' => array('title' => '抽象', 'name' => 'abstract'),
+    );
+
     /**
      * 获取角色详情
      *
@@ -145,7 +163,7 @@ final class RoleInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_insert', 'json')
+                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/role/role_create', 'json')
                       ->appendData('role', $role)
                       ->appendData('openid', $openid)
                       ->appendData('poolid', $poolid)

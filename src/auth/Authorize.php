@@ -68,14 +68,14 @@ final class Authorize {
     private static $cache;
 
     /**
-     * @param \Psr\SimpleCache\CacheInterface $cache
+     * @param CacheInterface $cache
      */
     public static function setCache(CacheInterface $cache) {
         self::$cache = $cache;
     }
 
     /**
-     * @return \Psr\SimpleCache\CacheInterface
+     * @return CacheInterface
      */
     public static function getCache() {
         return self::$cache;

@@ -76,7 +76,7 @@ class Channel {
 
             if (!empty($channel)) {
                 if ($cache) {
-                    $this->authority->set($cacheKey, $channel, Config::get('session.expire', 1440));
+                    $this->authority->set($cacheKey, $channel, $this->authority->expire);
                     // Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
                 } else {
                     // Cache::delete($cacheKey);
@@ -92,7 +92,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/channel', 'json')
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/channel', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('cache', $cache)
                       ->appendData('url', urlencode($url))
@@ -101,7 +101,7 @@ class Channel {
         if (!empty($result)) {
             if ($cache) {
                 // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
-                $this->authority->set($cacheKey, $result, Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result, $this->authority->expire);
             } else {
                 // Cache::delete($cacheKey);
                 $this->authority->delete($cacheKey);
@@ -156,7 +156,7 @@ class Channel {
 
             if (!empty($channel)) {
                 if ($cache) {
-                    $this->authority->set($cacheKey, $channel, Config::get('session.expire', 1440));
+                    $this->authority->set($cacheKey, $channel, $this->authority->expire);
                     // Cache::set($cacheKey, $channel, Config::get('session.expire', 1440));
                 } else {
                     $this->authority->delete($cacheKey);
@@ -172,7 +172,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/identifier', 'json')
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/identifier', 'json')
                       ->appendData('poolid', $poolid)
                       ->appendData('appid', $appid)
                       ->appendData('identifier', urlencode($identifier))
@@ -181,7 +181,7 @@ class Channel {
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                $this->authority->set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result['data'], $this->authority->expire);
                 // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             } else {
                 $this->authority->delete($cacheKey);
@@ -250,7 +250,8 @@ class Channel {
 
             if (!empty($access)) {
                 if ($cache) {
-                    $this->authority->set($cacheKey, $access, Config::get('session.expire', 1440));
+                    $this->authority->set($cacheKey, $access, $this->authority->expire);
+
                     // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));"
                 } else {
                     $this->authority->delete($cacheKey);
@@ -267,7 +268,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/access', 'json')
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/access', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('channelid', $channelid)
@@ -277,7 +278,7 @@ class Channel {
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                $this->authority->set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result['data'], $this->authority->expire);
                 // Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
             } else {
                 $this->authority->delete($cacheKey);
@@ -313,7 +314,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/ram/workspace', 'json')
+                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/workspace', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('roleid', $roleid)
@@ -323,7 +324,7 @@ class Channel {
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                $this->authority->set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+                $this->authority->set($cacheKey, $result['data'], $this->authority->expire);
             } else {
                 $this->authority->delete($cacheKey);
             }
