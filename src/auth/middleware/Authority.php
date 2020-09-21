@@ -157,7 +157,7 @@ abstract class Authority implements CacheInterface {
          */
         $identifier = $this->getInternalIdentifier();
         if (empty($identifier)) {
-            $this->logcat('error', '无效的频道标识符：' . $identifier . __LINE__);
+            $this->logcat('error', '无效的频道标识符：' . $identifier);
 
             return $this->response($identifier, 404, '', '无效的频道标识符', 'json');
         }
@@ -177,7 +177,7 @@ abstract class Authority implements CacheInterface {
         $channel = $this->channel->getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
 
         if (empty($channel)) {
-            $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)' . __LINE__);
+            $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
             $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
         }
         $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
@@ -190,12 +190,12 @@ abstract class Authority implements CacheInterface {
         }
 
         if (empty($channel) || !isset($channel['channelid']) || empty($channel['channelid'])) {
-            $this->logcat('error', 'Authority::handler(404 无效的频道信息)' . $identifier . __LINE__);
+            $this->logcat('error', 'Authority::handler(404 无效的频道信息)' . $identifier);
 
             return $this->response('', 404, 'Invalid Channel information ', '无效的频道信息');
         }
         if (!isset($channel['status']) || empty($channel['status']) || $channel['status'] != 1) {
-            $this->logcat('error', 'Authority::handler(410 该频道尚未启用)' . $identifier . __LINE__);
+            $this->logcat('error', 'Authority::handler(410 该频道尚未启用)' . $identifier);
 
             return $this->response('', 410, 'Channel information not available', '该频道尚未启用');
         }
@@ -210,65 +210,56 @@ abstract class Authority implements CacheInterface {
         }
 
         /**
-         * @todo 6、校验异步请求
-         */
-        if (!Authorize::isLogin()) {
-            if (is_ajax() || is_pjax()) {
-                $this->logcat('error', 'Authority::handler(ajax checkChannel 401 身份认证)' . __LINE__);
-
-                return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
-            }
-
-            if (!(is_get() || Request::isGet())) {
-                $this->logcat('error', 'Authority::handler(401 身份认证)' . __LINE__);
-
-                return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
-            }
-
-            if (Config::get('auth.level', 'slave') == 'master') {
-                $this->logcat('debug', 'Authority::Redirect(Unauthorized 302 登录请求)');
-                // $response = Authorize::request(true);
-                // $url = Config::get('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true));
-
-                // return $this->response($url, 302, 'Unauthorized', '登录请求');
-            }
-
-            // $result = Authorize::dispenser(Config::get('auth.level', 'slave'));
-            // $result = Authorize::dispenser(Config::get('auth.level', 'slave'), 'auth_union');
-            // $result = Authorize::getClient(Config::get('auth.level', 'slave'))->request('auth_base');
-            $result = Authorize::getClient(true)->authorize(
-                $this->appid,
-                $this->secret,
-                Request::url(true),
-                'code',
-                'auth_base',
-                '',
-                $this->lang
-            );
-
-            $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
-
-            if ($result instanceof Redirect) {
-                $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
-
-                return $result;
-            }
-            if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                $this->logcat('debug', 'Authority::handler(UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                $this->onAuthorized($result);
-            } else {
-                $this->logcat('error', 'Authority::handler(Request::Param)' . __LINE__ . json_encode(Request::param()));
-            }
-        }
-
-        /**
          * @todo 7、检查频道是否需要权限检查：默认权限，仅登录即可
          */
         if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
             $this->logcat('info', '默认权限，仅登录即可：' . $identifier);
 
-            return $this->response('', 200);
+            /**
+             * @todo 6、校验异步请求
+             */
+            if (!Authorize::isLogin()) {
+                if (is_ajax() || is_pjax()) {
+                    $this->logcat('error', 'Authority::handler(ajax checkChannel 401 身份认证)');
+
+                    return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
+                }
+
+                if (!(is_get() || Request::isGet())) {
+                    $this->logcat('error', 'Authority::handler(401 身份认证)');
+
+                    return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
+                }
+
+                $result = Authorize::getClient(true)->authorize(
+                    $this->appid,
+                    $this->secret,
+                    Request::url(true),
+                    'code',
+                    'auth_base',
+                    '',
+                    $this->lang
+                );
+
+                $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
+
+                if ($result instanceof Redirect) {
+                    $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
+
+                    return $result;
+                }
+                if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                    $this->logcat('debug', 'Authority::handler(UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                    $this->onAuthorized($result);
+                } else {
+                    $this->logcat('error', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
+                }
+            }
+
+            if (Authorize::isLogin()) {
+                return $this->response('', 200);
+            }
         }
 
         /**
@@ -277,7 +268,7 @@ abstract class Authority implements CacheInterface {
         if (!Authorize::isUnion()) {
             // 获取联合授权
             if (is_ajax() || is_pjax()) {
-                $this->logcat('error', 'Authority::handler(异步请求需要授权认证)' . __LINE__);
+                $this->logcat('error', 'Authority::handler(异步请求需要授权认证)');
 
                 return $this->response('', 407, 'Asyn Proxy Authentication Required', '异步请求需要授权认证', 'json');
             }
@@ -304,16 +295,15 @@ abstract class Authority implements CacheInterface {
 
                     $this->onAuthorized($result);
                 } else {
-                    $this->logcat('error', 'Authority::handler(Request::Param)' . __LINE__ . json_encode(Request::param()));
+                    $this->logcat('error', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
                 }
             }
         }
 
         if (!Authorize::isUnion()) {
-            $this->logcat('error', 'Authority::handler(Proxy Authentication Required)' . __LINE__);
+            $this->logcat('error', 'Authority::handler(Proxy Authentication Required)');
 
             return $this->response('', 407);
-            // return AuthUnion::request(true);
         }
 
         /**
@@ -328,19 +318,19 @@ abstract class Authority implements CacheInterface {
         }
 
         if (empty($access)) {
-            $this->logcat('error', 'Authority::handler(407 无效的授权信息)' . __LINE__);
+            $this->logcat('error', 'Authority::handler(407 无效的授权信息)');
 
             return $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
         }
         if (!isset($access['status']) || $access['status'] != 1) {
-            $this->logcat('error', 'Authority::handler(407 授权信息已被禁用)' . __LINE__);
+            $this->logcat('error', 'Authority::handler(407 授权信息已被禁用)');
 
             return $this->response('', 407, 'Authorization information has been disabled', '授权信息已被禁用');
         }
 
         if (!isset($access['allow']) || $access['allow'] != 1) {
             $this->logcat(
-                'debug', 'Authority::handler(402 权限不足)'
+                'debug', 'Authority::handler(402 权限不足，无法访问该页面)'
                        . ' Channel：' . json_encode($channel, JSON_UNESCAPED_UNICODE)
                        . ' Access：' . json_encode($access, JSON_UNESCAPED_UNICODE)
             );
@@ -348,16 +338,16 @@ abstract class Authority implements CacheInterface {
             return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
         }
 
-        if (!isset($access['method']) || (stripos($access['method'], 'ajax') === false && is_ajax())) {
-            $this->logcat('error', 'Authority::handler(405 该页面禁止Ajax请求)' . __LINE__);
-
-            return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
-        }
-
         if (!isset($access['method']) || stripos($access['method'], Request::method()) === false) {
-            $this->logcat('error', 'Authority::handler(405 该页面禁止 ' . Request::method() . ' 方法请求)' . __LINE__);
+            $this->logcat('error', 'Authority::handler(405 该页面禁止 ' . Request::method() . ' 方法请求)');
 
             return $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
+        }
+
+        if (!isset($access['method']) || (stripos($access['method'], 'ajax') === false && is_ajax())) {
+            $this->logcat('error', 'Authority::handler(405 该页面禁止Ajax请求)');
+
+            return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
         }
 
         if (!isset($access['method']) || stripos($access['method'], Request::method()) !== false) {
@@ -366,7 +356,7 @@ abstract class Authority implements CacheInterface {
             return $this->response('', 200);
         }
 
-        $this->logcat('error', 'Authority::handler(406 授权信息异常)' . __LINE__);
+        $this->logcat('error', 'Authority::handler(406 授权信息异常)');
 
         return $this->response('', 406, 'Not Acceptable', '授权信息异常');
     }
