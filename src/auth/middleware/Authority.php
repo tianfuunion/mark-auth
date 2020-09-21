@@ -4,7 +4,6 @@ declare (strict_types=1);
 
 namespace mark\auth\middleware;
 
-use think\facade\Config;
 use think\facade\Request;
 use think\response\Redirect;
 
@@ -14,6 +13,10 @@ use mark\auth\model\Channel;
 use mark\system\Os;
 
 use Psr\SimpleCache\CacheInterface;
+use Psr\SimpleCache\InvalidArgumentException;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\ModelNotFoundException;
+use think\db\exception\DbException;
 
 /**
  * Class Authority
@@ -141,12 +144,9 @@ abstract class Authority implements CacheInterface {
     }
 
     /**
-     * 权限验证处理器
+     * 权限校验处理器
      *
-     * @return array|bool|false|mixed|string|\think\response\Redirect
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
+     * @return array|bool|mixed|\think\response\Redirect
      */
     protected final function handler() {
         // 初始化
@@ -174,191 +174,207 @@ abstract class Authority implements CacheInterface {
         /**
          * @todo 3、校验标识符，校验频道状态
          */
-        $channel = $this->channel->getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
+        try {
+            $channel = $this->channel->getIdentifier($this->appid, $this->poolid, $identifier, $this->debug);
 
-        if (empty($channel)) {
-            $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
-            $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
-        }
-        $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
-
-        /**
-         * @todo 4、管理员或测试员 不检查频道状态
-         */
-        if (Authorize::isAdmin() || Authorize::isTesting()) {
-            $this->logcat('debug', 'Authority::handler(Check Super Manager has Channel privileges)' . $identifier);
-        }
-
-        if (empty($channel) || !isset($channel['channelid']) || empty($channel['channelid'])) {
-            $this->logcat('error', 'Authority::handler(404 无效的频道信息)' . $identifier);
-
-            return $this->response('', 404, 'Invalid Channel information ', '无效的频道信息');
-        }
-        if (!isset($channel['status']) || empty($channel['status']) || $channel['status'] != 1) {
-            $this->logcat('error', 'Authority::handler(410 该频道尚未启用)' . $identifier);
-
-            return $this->response('', 410, 'Channel information not available', '该频道尚未启用');
-        }
-
-        /**
-         * @todo 5、检查频道是否需要权限检查：公开页面，无需检查
-         */
-        if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$public) {
-            $this->logcat('info', '公开页面，无需检查：' . $identifier);
-
-            return $this->response('', 200);
-        }
-
-        /**
-         * @todo 7、检查频道是否需要权限检查：默认权限，仅登录即可
-         */
-        if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
-            $this->logcat('info', '默认权限，仅登录即可：' . $identifier);
+            if (empty($channel)) {
+                $this->logcat('error', 'Authority::handler(channel::getIdentifier is null)');
+                $channel = $this->channel->getChannel($this->appid, rtrim(Request::server('document_uri'), "/"), $this->debug);
+            }
+            $this->logcat('info', 'Authority::handler(Channel Result)' . json_encode($channel, JSON_UNESCAPED_UNICODE));
 
             /**
-             * @todo 6、校验异步请求
+             * @todo 4、管理员或测试员 不检查频道状态
              */
-            if (!Authorize::isLogin()) {
-                if (is_ajax() || is_pjax()) {
-                    $this->logcat('error', 'Authority::handler(ajax checkChannel 401 身份认证)');
-
-                    return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
-                }
-
-                if (!(is_get() || Request::isGet())) {
-                    $this->logcat('error', 'Authority::handler(401 身份认证)');
-
-                    return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
-                }
-
-                $result = Authorize::getClient(true)->authorize(
-                    $this->appid,
-                    $this->secret,
-                    Request::url(true),
-                    'code',
-                    'auth_base',
-                    '',
-                    $this->lang
-                );
-
-                $this->logcat('debug', 'Authority::handler(Authorize::dispenser)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
-
-                if ($result instanceof Redirect) {
-                    $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
-
-                    return $result;
-                }
-                if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                    $this->logcat('debug', 'Authority::handler(UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                    $this->onAuthorized($result);
-                } else {
-                    $this->logcat('error', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
-                }
+            if (Authorize::isAdmin() || Authorize::isTesting()) {
+                $this->logcat('debug', 'Authority::handler(Check Super Manager has Channel privileges)' . $identifier);
             }
 
-            if (Authorize::isLogin()) {
+            if (empty($channel) || !isset($channel['channelid']) || empty($channel['channelid'])) {
+                $this->logcat('error', 'Authority::handler(404 无效的频道信息)' . $identifier);
+
+                return $this->response('', 404, 'Invalid Channel information ', '无效的频道信息');
+            }
+            if (!isset($channel['status']) || empty($channel['status']) || $channel['status'] != 1) {
+                $this->logcat('error', 'Authority::handler(410 该频道尚未启用)' . $identifier);
+
+                return $this->response('', 410, 'Channel information not available', '该频道尚未启用');
+            }
+
+            /**
+             * @todo 5、检查频道是否需要权限检查：公开页面，无需检查
+             */
+            if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$public) {
+                $this->logcat('info', '公开页面，无需检查：' . $identifier);
+
                 return $this->response('', 200);
             }
-        }
 
-        /**
-         * @todo 8、其它状态的频道则需要*授权
-         */
-        if (!Authorize::isUnion()) {
-            // 获取联合授权
-            if (is_ajax() || is_pjax()) {
-                $this->logcat('error', 'Authority::handler(异步请求需要授权认证)');
+            /**
+             * @todo 6、检查频道是否需要权限检查：默认权限，仅登录即可
+             */
+            if (isset($channel[AuthInfo::$modifier]) && $channel[AuthInfo::$modifier] == AuthInfo::$default) {
+                $this->logcat('info', '默认权限，仅登录即可：' . $identifier);
 
-                return $this->response('', 407, 'Asyn Proxy Authentication Required', '异步请求需要授权认证', 'json');
+                /**
+                 * @todo 7、校验异步请求
+                 */
+                if (!Authorize::isLogin()) {
+                    if (is_ajax() || is_pjax()) {
+                        $this->logcat('error', 'Authority::handler(ajax checkChannel 401 身份认证)');
+
+                        return $this->response('', 401, 'Ajax Unauthorized', '请求用户的身份认证', 'json');
+                    }
+
+                    if (!(is_get() || Request::isGet())) {
+                        $this->logcat('error', 'Authority::handler(401 身份认证)');
+
+                        return $this->response('', 401, 'Unauthorized', '请求用户的身份认证');
+                    }
+
+                    $result = Authorize::getClient(true)->authorize(
+                        $this->appid,
+                        $this->secret,
+                        Request::url(true),
+                        'code',
+                        'auth_base',
+                        '',
+                        $this->lang
+                    );
+
+                    $this->logcat('debug', 'Authority::handler(Authorize::authorize)' . json_encode(!is_array($result) ? $result : '', JSON_UNESCAPED_UNICODE));
+
+                    if ($result instanceof Redirect) {
+                        $this->logcat('debug', 'Authority::handler(Authorize::authorize instanceof Redirect)');
+
+                        return $result;
+                    }
+                    if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                        $this->logcat('debug', 'Authority::handler(UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                        $this->onAuthorized($result);
+                    } else {
+                        $this->logcat('error', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
+                    }
+                }
+
+                if (Authorize::isLogin()) {
+                    return $this->response('', 200);
+                }
             }
 
-            if (is_get() || Request::isGet()) {
-                $result = Authorize::getClient(true)->authorize(
-                    $this->appid,
-                    $this->secret,
-                    Request::url(true),
-                    'code',
-                    'auth_union',
-                    '',
-                    $this->lang
+            /**
+             * @todo 8、其它状态的频道则需要*授权
+             */
+            if (!Authorize::isUnion()) {
+                // 获取联合授权
+                if (is_ajax() || is_pjax()) {
+                    $this->logcat('error', 'Authority::handler(异步请求需要授权认证)');
+
+                    return $this->response('', 407, 'Asyn Proxy Authentication Required', '异步请求需要授权认证', 'json');
+                }
+
+                if (is_get() || Request::isGet()) {
+                    $result = Authorize::getClient(true)->authorize(
+                        $this->appid,
+                        $this->secret,
+                        Request::url(true),
+                        'code',
+                        'auth_union',
+                        '',
+                        $this->lang
+                    );
+
+                    if ($result instanceof Redirect) {
+                        $this->logcat('debug', 'Authority::handler(Authorize::authorize instanceof Redirect)');
+
+                        return $result;
+                    }
+
+                    if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                        $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+                        $this->onAuthorized($result);
+                    } else {
+                        $this->logcat('error', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
+                    }
+                }
+            }
+
+            if (!Authorize::isUnion()) {
+                $this->logcat('error', 'Authority::handler(Proxy Authentication Required)');
+
+                return $this->response('', 407);
+            }
+
+            /**
+             * @todo 9、校验授权信息
+             */
+            $access = $this->channel->getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
+
+            if (Authorize::isAdmin() || Authorize::isTesting()) {
+                $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');
+
+                return $this->response('', 200);
+            }
+
+            if (empty($access)) {
+                $this->logcat('error', 'Authority::handler(407 无效的授权信息)');
+
+                return $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
+            }
+            if (!isset($access['status']) || $access['status'] != 1) {
+                $this->logcat('error', 'Authority::handler(407 授权信息已被禁用)');
+
+                return $this->response('', 407, 'Authorization information has been disabled', '授权信息已被禁用');
+            }
+
+            if (!isset($access['allow']) || $access['allow'] != 1) {
+                $this->logcat(
+                    'debug', 'Authority::handler(402 权限不足，无法访问该页面)'
+                           . ' Channel：' . json_encode($channel, JSON_UNESCAPED_UNICODE)
+                           . ' Access：' . json_encode($access, JSON_UNESCAPED_UNICODE)
                 );
 
-                if ($result instanceof Redirect) {
-                    $this->logcat('debug', 'Authority::handler(Authorize::dispenser instanceof Redirect)');
-
-                    return $result;
-                }
-
-                if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
-                    $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
-                    $this->onAuthorized($result);
-                } else {
-                    $this->logcat('error', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
-                }
+                return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
             }
+
+            if (!isset($access['method']) || stripos($access['method'], Request::method()) === false) {
+                $this->logcat('error', 'Authority::handler(405 该页面禁止 ' . Request::method() . ' 方法请求)');
+
+                return $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
+            }
+
+            if (!isset($access['method']) || (stripos($access['method'], 'ajax') === false && is_ajax())) {
+                $this->logcat('error', 'Authority::handler(405 该页面禁止Ajax请求)');
+
+                return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
+            }
+
+            if (!isset($access['method']) || stripos($access['method'], Request::method()) !== false) {
+                $this->logcat('info', 'Authority::handler(Success::' . Request::method() . ')' . Request::url(true));
+
+                return $this->response('', 200);
+            }
+
+            $this->logcat('error', 'Authority::handler(406 授权信息异常)');
+
+            return $this->response('', 406, 'Not Acceptable', '授权信息异常');
+        } catch (InvalidArgumentException $e) {
+            $this->logcat('error', 'Authority::handler(500 InvalidArgumentException)' . $e->getMessage());
+
+            return $this->response('', 500, 'InvalidArgumentException' . $e->getMessage(), '授权服务异常');
+        } catch (DataNotFoundException $e) {
+            $this->logcat('error', 'Authority::handler(500 DataNotFoundException)' . $e->getMessage());
+
+            return $this->response('', 500, 'DataNotFoundException' . $e->getMessage(), '授权服务异常');
+        } catch (ModelNotFoundException $e) {
+            $this->logcat('error', 'Authority::handler(500 ModelNotFoundException)' . $e->getMessage());
+
+            return $this->response('', 500, 'ModelNotFoundException' . $e->getMessage(), '授权服务异常');
+        } catch (DbException $e) {
+            $this->logcat('error', 'Authority::handler(500 DbException)' . $e->getMessage());
+
+            return $this->response('', 500, 'DbException' . $e->getMessage(), '授权服务异常');
         }
-
-        if (!Authorize::isUnion()) {
-            $this->logcat('error', 'Authority::handler(Proxy Authentication Required)');
-
-            return $this->response('', 407);
-        }
-
-        /**
-         * @todo 9、校验授权信息
-         */
-        $access = $this->channel->getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
-
-        if (Authorize::isAdmin() || Authorize::isTesting()) {
-            $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');
-
-            return $this->response('', 200);
-        }
-
-        if (empty($access)) {
-            $this->logcat('error', 'Authority::handler(407 无效的授权信息)');
-
-            return $this->response('', 407, 'Invalid authorization information', '无效的授权信息');
-        }
-        if (!isset($access['status']) || $access['status'] != 1) {
-            $this->logcat('error', 'Authority::handler(407 授权信息已被禁用)');
-
-            return $this->response('', 407, 'Authorization information has been disabled', '授权信息已被禁用');
-        }
-
-        if (!isset($access['allow']) || $access['allow'] != 1) {
-            $this->logcat(
-                'debug', 'Authority::handler(402 权限不足，无法访问该页面)'
-                       . ' Channel：' . json_encode($channel, JSON_UNESCAPED_UNICODE)
-                       . ' Access：' . json_encode($access, JSON_UNESCAPED_UNICODE)
-            );
-
-            return $this->response('', 402, 'Insufficient authority', '权限不足，无法访问该页面');
-        }
-
-        if (!isset($access['method']) || stripos($access['method'], Request::method()) === false) {
-            $this->logcat('error', 'Authority::handler(405 该页面禁止 ' . Request::method() . ' 方法请求)');
-
-            return $this->response('', 405, Request::method() . ' Method Not Allowed', '该页面禁止' . Request::method() . '请求');
-        }
-
-        if (!isset($access['method']) || (stripos($access['method'], 'ajax') === false && is_ajax())) {
-            $this->logcat('error', 'Authority::handler(405 该页面禁止Ajax请求)');
-
-            return $this->response('', 405, 'Ajax Method Not Allowed', '该页面禁止Ajax请求');
-        }
-
-        if (!isset($access['method']) || stripos($access['method'], Request::method()) !== false) {
-            $this->logcat('info', 'Authority::handler(Success::' . Request::method() . ')' . Request::url(true));
-
-            return $this->response('', 200);
-        }
-
-        $this->logcat('error', 'Authority::handler(406 授权信息异常)');
-
-        return $this->response('', 406, 'Not Acceptable', '授权信息异常');
     }
 
     /**
@@ -401,14 +417,10 @@ abstract class Authority implements CacheInterface {
             $this->getIgnore(), array('/',
                                       'index:*', 'index:index:index', "index.htm", "index.html", "index.php",
                                       'portal:*', 'portal:index:index', "portal.htm", "portal.html", "portal.php",
-
                                       'captcha:*', '*:captcha:*', 'captcha:index:index',
-
                                       "favicon.ico", "rotobs.txt",
-
                                       "404.htm", "404.html",
-                                      "502.htm", "502.html"
-                              )
+                                      "502.htm", "502.html")
         );
     }
 
@@ -447,21 +459,21 @@ abstract class Authority implements CacheInterface {
      *
      * @return bool
      */
-    protected abstract function has_role(): bool;
+    protected abstract function has_role(array $role): bool;
 
     /**
      * 验证联合授权
      *
      * @return bool
      */
-    protected abstract function has_union(): bool;
+    protected abstract function has_union(array $union): bool;
 
     /**
      * 验证权限
      *
      * @return bool
      */
-    protected abstract function has_permission(): bool;
+    protected abstract function has_permission(array $permission): bool;
 
     /**
      * 请求重定向
@@ -500,7 +512,7 @@ abstract class Authority implements CacheInterface {
      *
      * @return mixed
      */
-    protected abstract function response($data, $code = 200, $status = '', $msg = '', $type = 'json');
+    protected abstract function response($data, int $code = 200, string $status = '', string $msg = '', string $type = 'json');
 
     /**
      * 自定义实现日志类
