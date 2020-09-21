@@ -302,8 +302,22 @@ abstract class Authority implements CacheInterface {
 
                     return $result;
                 }
-            }
 
+                if (!empty($result) && is_array($result) && isset($result['openid']) && !empty($result['openid'])) {
+                    $this->logcat('debug', 'Authority::handler(Wechat UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                    $this->onAuthorized($result);
+                } elseif (!empty($result) && is_array($result) && isset($result['uuid']) && !empty($result['uuid'])) {
+                    $this->logcat('debug', 'Authority::handler(Union UserInfo)' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                    $this->onAuthorized($result);
+                } else {
+                    $this->logcat('debug', 'Authority::handler(Request::Param)' . json_encode(Request::param()));
+                }
+            }
+        }
+
+        if (!Authorize::isUnion()) {
             $this->logcat('error', 'Authority::handler(Proxy Authentication Required)');
 
             return $this->response('', 407);
