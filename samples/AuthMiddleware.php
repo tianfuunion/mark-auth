@@ -20,6 +20,9 @@ use mark\auth\Authorize;
 use mark\auth\middleware\Authority;
 use mark\response\Responsive;
 use mark\system\Os;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\ModelNotFoundException;
+use think\db\exception\DbException;
 
 /**
  * Class AuthCheck
@@ -43,17 +46,19 @@ class AuthMiddleware extends Authority {
 
         $this->setPoolId(Config::get('auth.poolid'));
         $this->setAppId(Config::get('auth.appid'));
+        $this->setSecret(Config::get('auth.appsecret'));
+        $this->setLang(Config::get('lang.default_lang'));
+
         $this->setDebug($this->app->isDebug());
-        // $this->setCache($this->request->param('cache', true));
-        // $this->setCache($this->app->cache);
 
         $handler = Cache::handler();
-        // $this->setCache($handler);
-
         $instance = Cache::instance();
-        // $this->setCache($instance);
 
         parent::__construct();
+
+        $this->app->channel = $this->channel;
+
+        $this->app->authorize = $this;
     }
 
     /**
@@ -64,7 +69,7 @@ class AuthMiddleware extends Authority {
      *
      * @return Response
      */
-    public function handle($request, Closure $next) {
+    public function handle(Request $request, Closure $next) {
         $this->request = $request;
 
         // AuthUnion 初始化
@@ -80,47 +85,55 @@ class AuthMiddleware extends Authority {
             return $next($request);
         }
 
-        $result = parent::handler();
-        if ($result instanceof Response) {
-            $this->logcat('debug', 'AuthMiddleware::handle（Response Redirect）' . $this->getIdentifier());
+        try {
+            $result = parent::handler();
 
-            return $result;
-        }
-        if (is_array($result) && !empty($result['code'])) {
-            $this->logcat('debug', 'AuthMiddleware::handler(' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
+            if ($result instanceof Response) {
+                $this->logcat('debug', 'AuthMiddleware::handle（Response Redirect）' . $this->getIdentifier());
 
-            switch ($result["code"]) {
-                case 200:
-                    // 正常
-                    return $next($request);
-                    break;
-                case 302:
-                    // 跳转
-                    return redirect($result['data']);
-                    break;
-                case 401:
-                    // 认证
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                case 404:
-                    // 错误
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                case 412:
-                    // 无效
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                case 503:
-                    // 维护
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
-                default:
-                    // 异常
-                    return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
-                    break;
+                return $result;
             }
+            if (is_array($result) && !empty($result['code'])) {
+                $this->logcat('debug', 'AuthMiddleware::handler(' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
+
+                switch ($result["code"]) {
+                    case 200:
+                        // 正常
+                        return $next($request);
+                        break;
+                    case 302:
+                        // 跳转
+                        return redirect($result['data']);
+                        break;
+                    case 401:
+                        // 认证
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    case 404:
+                        // 错误
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    case 412:
+                        // 无效
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    case 503:
+                        // 维护
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                    default:
+                        // 异常
+                        return Responsive::display($result['data'], $result['code'], $result['status'], $result['msg'], $result['type']);
+                        break;
+                }
+            }
+        } catch (DataNotFoundException $e) {
+            $this->logcat('error', 'AuthMiddleware::handler(DataNotFoundException)' . $e->getMessage() . '(' . $this->getIdentifier() . ')');
+        } catch (ModelNotFoundException $e) {
+            $this->logcat('error', 'AuthMiddleware::handler(ModelNotFoundException)' . $e->getMessage() . '(' . $this->getIdentifier() . ')');
+        } catch (DbException $e) {
+            $this->logcat('error', 'AuthMiddleware::handler(DbException)' . $e->getMessage() . '(' . $this->getIdentifier() . ')');
         }
-        $this->logcat('error', 'AuthMiddleware::handler(Not Code ' . $this->getIdentifier() . ')' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
         return $next($request);
     }
@@ -306,6 +319,10 @@ class AuthMiddleware extends Authority {
         return array('data' => $data, 'code' => $code, 'status' => $status, 'msg' => $msg, 'type' => $type);
     }
 
+    protected function onOpenid(string $openid): bool {
+        return false;
+    }
+
     protected function onAuthorized(array $userInfo): void {
         if ($userInfo && is_array($userInfo) && isset($userInfo['openid']) && !empty($userInfo['openid'])) {
             // @todo 此处获取到微信UserInfo，请使用本地请求，用户登录数据(此处应统一为UnionInfo)，
@@ -332,19 +349,16 @@ class AuthMiddleware extends Authority {
         $this->session->delete('password');
         $this->session->set(Authorize::$login, 1);
         $this->session->set(Authorize::$isLogin, 1);
-        $this->session->set(Authorize::$expiretime, $this->request->time() + Config::get('auth.expire', 1440));
+        $this->session->set(Authorize::$expiretime, time() + Config::get('auth.expire', 1440));
 
         Cookie::delete('password');
         Cookie::set(Authorize::$login, "1");
         Cookie::set(Authorize::$isLogin, "1");
-        Cookie::set(Authorize::$expiretime, (string)($this->request->time() + (int)Config::get('auth.expire', 1440)));
+        Cookie::set(Authorize::$expiretime, (string)(time() + (int)Config::get('auth.expire', 1440)));
         Cookie::set("TF_Cookie", $this->session->getId(), array('domain' => "tianfu.ink"));
     }
 
     public function logcat($level, $message, array $context = []): void {
-        if ($this->app->isDebug() && Authorize::isAdmin() && Authorize::isUnion() && Authorize::isTesting()) {
-
-        }
         if ($this->app->isDebug()) {
             Log::log($level, $message, $context);
         }
@@ -377,24 +391,53 @@ class AuthMiddleware extends Authority {
             . "\nUnionID:" . $this->session->get('union.unionid')
             . "\nRoldID:" . $this->session->get('union.roleid')
             . "\nUUID:" . $this->session->get('union.uid')
-            . "\nStatus:" . $this->session->get('union.status')
 
             . "\nProject：" . app('http')->getname()
             . "\ncontroller：" . $this->request->controller()
             . "\naction：" . $this->request->action()
-            . "\ntype：" . $this->request->type()
             . "\ntime：" . $this->request->time()
             . "\nrootDomain：" . $this->request->rootDomain()
             . "\ndomain：" . $this->request->domain()
             . "\nip：" . $this->request->ip()
             . "\nisAjax：" . $this->request->isAjax()
-            . "\nis_ajax：" . is_ajax()
             . "\nmethod：" . $this->request->method()
             . "\nurl：" . $this->request->url()
             . "\nurl：" . $this->request->url(true)
-            . "\nRequest:" . json_encode($this->request->param(), JSON_UNESCAPED_UNICODE)
+            . "\nServer:" . json_encode($this->request->server(), JSON_UNESCAPED_UNICODE)
             . "\n"
         );
+    }
+
+    public function has($key) {
+        return Cache::has($key);
+    }
+
+    public function get($key, $default = null) {
+        return Cache::get($key, $default);
+    }
+
+    public function set($key, $value, $ttl = null) {
+        return Cache::set($key, $value, $ttl);
+    }
+
+    public function delete($key) {
+        return Cache::delete($key);
+    }
+
+    public function clear() {
+        return Cache::clear();
+    }
+
+    public function getMultiple($keys, $default = null) {
+        return Cache::getMultiple($keys, $default);
+    }
+
+    public function setMultiple($values, $ttl = null) {
+        return Cache::setMultiple($values, $ttl);
+    }
+
+    public function deleteMultiple($keys) {
+        return Cache::deleteMultiple($keys);
     }
 
 }
