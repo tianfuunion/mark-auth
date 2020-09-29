@@ -20,9 +20,6 @@
     use mark\auth\middleware\Authority;
     use mark\response\Responsive;
     use mark\system\Os;
-    use think\db\exception\DataNotFoundException;
-    use think\db\exception\ModelNotFoundException;
-    use think\db\exception\DbException;
 
     /**
      * Class AuthCheck

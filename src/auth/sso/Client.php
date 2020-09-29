@@ -2,21 +2,21 @@
 
 declare (strict_types=1);
 
-namespace mark\auth;
+namespace mark\auth\sso;
 
 use think\facade\Request;
 use think\facade\Config;
 use think\facade\Log;
 
-use mark\auth\sso\Sso;
 use mark\http\Curl;
+use mark\auth\Authorize;
 
 /**
  * 如果用户在微信客户端中访问第三方网页，公众号可以通过微信网页授权机制，来获取用户基本信息，进而实现业务逻辑。
  *
  * Class Client
  *
- * @package mark\auth
+ * @package mark\auth\sso
  */
 class Client extends Sso {
 
@@ -26,7 +26,10 @@ class Client extends Sso {
      *
      * @param string $scope
      *
-     * @return array|bool|false|mixed|string|\think\response\Redirect
+     * @return array|bool|mixed|\think\response\Redirect
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     * @deprecated
+     *
      * @author: Mark Zong
      */
     public function request($scope = 'auth_base') {
@@ -66,6 +69,20 @@ class Client extends Sso {
         return false;
     }
 
+    /**
+     * 获取用户授权信息
+     *
+     * @param        $appid
+     * @param string $secret
+     * @param string $redirect_uri
+     * @param string $response_type
+     * @param string $scope
+     * @param string $state
+     * @param string $lang
+     *
+     * @return array|bool|mixed|\think\response\Redirect
+     * @throws \Psr\SimpleCache\InvalidArgumentException
+     */
     public function authorize($appid, string $secret, string $redirect_uri, $response_type = 'code', $scope = 'auth_base', $state = '', $lang = 'zh-cn') {
         // 1、第一步：用户同意授权，获取code
         if (!Request::has("code", "get", true)) {
@@ -119,7 +136,8 @@ class Client extends Sso {
      * @link         https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#0
      */
     public function getCode($appid, string $redirect_uri, $response_type = 'code', $scope = 'auth_base', $state = '') {
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink') . '/auth.php/oauth2/authorize'
+        $url = Config::get('auth.host', Authorize::$host)
+            . '/auth.php/oauth2/authorize'
             . '?appid=' . $appid
             . '&redirect_uri=' . urlencode($redirect_uri)
             . '&response_type=' . $response_type
@@ -151,22 +169,34 @@ class Client extends Sso {
      *
      * @param string $appid
      * @param string $secret
-     * @param string $code 用于换取access_token的code，微信提供
+     * @param string $code 用于换取access_token的code
+     * @param bool   $cache
      *
-     * @return array|mixed
+     * @return array|mixed|\think\response\Redirect
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getAccessToken(string $appid, string $secret, string $code) {
+    public function getAccessToken(string $appid, string $secret, string $code, $cache = true) {
         if (empty($appid)) {
             return array();
         }
         if (empty($secret)) {
             return array();
         }
+
+        $cacheKey = 'sso.client:access_token:appid:' . $appid . ':secret:' . $secret;
+
+        if ($this->getCache()->has($cacheKey) && $cache) {
+            $token = $this->getCache()->get($cacheKey);
+            if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
+                return $token;
+            }
+        }
+
         if (empty($code)) {
             return array();
         }
 
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink')
+        $url = Config::get('auth.host', Authorize::$host)
             . '/auth.php/oauth2/access_token?appid=' . $appid . '&secret=' . $secret . '&code=' . $code . '&grant_type=authorization_code';
 
         Log::debug('Client::getAccessToken(Url)' . $url);
@@ -174,9 +204,8 @@ class Client extends Sso {
         $curl = Curl::getInstance(true)
                     ->get($url, 'json');
         $result = $curl->toArray();
-        $code = $curl->getResponseCode();
 
-        switch ($code) {
+        switch ($curl->getResponseCode()) {
             case 200:
                 if (!empty($result) && !empty($result['data']) && !empty($result['code'])) {
                     switch ($result['code']) {
@@ -196,7 +225,7 @@ class Client extends Sso {
                             Log::error('Client::getAccessToken(Invalid code, get code again)' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
                             return $this->getCode(
-                                Config::get('auth.appid'),
+                                $appid,
                                 Request::url(true),
                                 'code',
                                 'auth_union',
@@ -235,14 +264,14 @@ class Client extends Sso {
      * @return array
      * @link    https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#2
      */
-    public function refreshToken(string $appid, string $refresh_token) {
+    public function refreshToken(string $appid, string $refresh_token): array {
         if (empty($appid)) {
             return array();
         }
         if (empty($refresh_token)) {
             $refresh_token = Request::get('refresh_token');
         }
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink')
+        $url = Config::get('auth.host', Authorize::$host)
             . '/auth.php/oauth2/refresh_token?appid=' . $appid . '&grant_type=refresh_token&refresh_token=' . $refresh_token;
 
         Log::debug('Client::refreshToken(Url)' . $url);
@@ -265,10 +294,11 @@ class Client extends Sso {
      * @param string $openid       用户的唯一标识
      * @param string $lang         返回国家地区语言版本，zh_CN 简体，zh_TW 繁体，en 英语
      *
-     * @return array|mixed 微信用户信息数组
+     * @return array 微信用户信息数组
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#3
      */
-    public function getUserInfo(string $access_token, string $openid, string $lang = 'zh_CN') {
+    public function getUserInfo(string $access_token, string $openid, string $lang = 'zh_CN'): array {
         if (empty($access_token) || empty($openid)) {
             $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.appsecret'), Request::get('code'));
 
@@ -284,7 +314,7 @@ class Client extends Sso {
             $lang = Config::get('lang.default_lang', 'zh_CN');
         }
 
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink')
+        $url = Config::get('auth.host', Authorize::$host)
             . '/auth.php/oauth2/userinfo?access_token=' . $access_token . '&openid=' . $openid . '&lang=' . $lang;
 
         Log::debug('Client::getUserInfo(Url)' . $url);
@@ -338,9 +368,10 @@ class Client extends Sso {
      * @param string $openid       用户的唯一标识
      *
      * @return bool
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      * @link https://developers.weixin.qq.com/doc/offiaccount/OA_Web_Apps/Wechat_webpage_authorization.html#4
      */
-    public function verifyToken(string $access_token, string $openid) {
+    public function verifyToken(string $access_token, string $openid): bool {
         if (empty($access_token) || empty($openid)) {
             $token = $this->getAccessToken(Config::get('auth.appid'), Config::get('auth.appsecret'), Request::get('code'));
 
@@ -352,7 +383,7 @@ class Client extends Sso {
                 $openid = $token['openid'];
             }
         }
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink') .
+        $url = Config::get('auth.host', Authorize::$host) .
             '/auth.php/oauth2/verify_token?access_token=' . $access_token . '&openid=' . $openid;
         $result = Curl::getInstance(true)
                       ->get($url, 'json')
@@ -379,7 +410,7 @@ class Client extends Sso {
     public function authentication(
         string $appid, string $redirect_uri, string $response_type = 'code', string $scope = 'auth_base', $access_type = 'offline', string $state = ''
     ) {
-        $url = Config::get('auth.host', 'https://auth.tianfu.ink')
+        $url = Config::get('auth.host', Authorize::$host)
         . '/auth.php/authorize/choice'
         . '?appid=' . $appid
         . '&redirect_uri=' . urlencode($redirect_uri)

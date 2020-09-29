@@ -2,13 +2,9 @@
 
 namespace mark\auth\sso;
 
-use mark\auth\Authorize;
 use Psr\SimpleCache\CacheInterface;
 
 abstract class Sso {
-
-    /** @var Authorize */
-    protected $auth;
 
     /**
      * @var CacheInterface
@@ -18,10 +14,9 @@ abstract class Sso {
     /**
      * Sso constructor.
      *
-     * @param Authorize $auth
      */
-    public function __construct(Authorize $auth) {
-        $this->auth = $auth;
+    public function __construct() {
+
     }
 
     /**

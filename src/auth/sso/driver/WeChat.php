@@ -21,11 +21,11 @@ class WeChat extends Sso {
 
     /**
      * 用户同意授权，获取code
-     * Authorize constructor.
      *
      * @param string $scope
      *
      * @return array|bool|false|mixed|string|\think\response\Redirect
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
     public function request($scope = 'snsapi_base') {
         // 1、第一步：用户同意授权，获取code
@@ -65,6 +65,7 @@ class WeChat extends Sso {
     }
 
     /**
+     *
      * @param string $appid
      * @param string $secret
      * @param string $redirect_uri
@@ -74,8 +75,10 @@ class WeChat extends Sso {
      * @param string $lang
      *
      * @return array|bool|false|mixed|string|\think\response\Redirect
+     * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function authorize(string $appid, string $secret, string $redirect_uri, $response_type = 'code', $scope = 'snsapi_base', $state = '', $lang = 'zh-cn') {
+    public function authorize(string $appid, string $secret, string $redirect_uri, $response_type = 'code', $scope = 'snsapi_base', $state = '', $lang = 'zh-cn'
+    ) {
 
         // 1、第一步：用户同意授权，获取code
         if (!Request::has("code", "get", true)) {
@@ -97,7 +100,11 @@ class WeChat extends Sso {
         $token = $this->getAccessToken($appid, $secret, Request::get('code'));
         if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
 
-            return false;
+            $token = $this->getAccessToken($appid, $secret, Request::get('code'), false);
+            if ($token == false || empty($token['access_token']) || empty($token['openid'])) {
+
+                return false;
+            }
         }
 
         if ($scope === 'snsapi_base') {
@@ -158,14 +165,15 @@ class WeChat extends Sso {
      * @param string $appid
      * @param string $secret
      * @param string $code 用于换取access_token的code，微信提供
+     * @param bool   $cache
      *
      * @return array|bool|false|mixed|string
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function getAccessToken(string $appid, string $secret, string $code) {
-        $cacheKey = 'wechat:access_token:appid:' . $appid . ':secret:' . $secret;
+    public function getAccessToken(string $appid, string $secret, string $code, $cache = true) {
+        $cacheKey = 'wechat:access_token:appid:' . $appid . ':secret:' . $secret . ':code:' . $code;
 
-        if ($this->getCache()->has($cacheKey)) {
+        if ($this->getCache()->has($cacheKey) && $cache) {
             $token = $this->getCache()->get($cacheKey);
             if (!empty($token) && !empty($token['openid']) && !empty($token['access_token'])) {
                 return $token;

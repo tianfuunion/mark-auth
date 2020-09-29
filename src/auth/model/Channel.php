@@ -17,6 +17,7 @@ use mark\auth\middleware\Authority;
 use mark\http\Curl;
 use mark\system\Os;
 use mark\wechat\notice\Notice;
+use mark\auth\Authorize;
 
 /**
  * Class Channel
@@ -92,7 +93,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/channel', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/channel/channel', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('cache', $cache)
                       ->appendData('url', urlencode($url))
@@ -172,7 +173,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/identifier', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/channel/identifier', 'json')
                       ->appendData('poolid', $poolid)
                       ->appendData('appid', $appid)
                       ->appendData('identifier', urlencode($identifier))
@@ -189,8 +190,8 @@ class Channel {
 
             return $result['data'];
         }
-        // $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
+        // $this->authority->logcat('error', 'Channel::getIdentifier(Channel is null)' . json_encode($result, JSON_UNESCAPED_UNICODE));
         // Cache::delete($cacheKey);
         $this->authority->delete($cacheKey);
         self::runevent();
@@ -251,7 +252,6 @@ class Channel {
             if (!empty($access)) {
                 if ($cache) {
                     $this->authority->set($cacheKey, $access, $this->authority->expire);
-
                     // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));"
                 } else {
                     $this->authority->delete($cacheKey);
@@ -268,7 +268,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/access', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/channel/access', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('channelid', $channelid)
@@ -314,7 +314,7 @@ class Channel {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/channel/workspace', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/channel/workspace', 'json')
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('roleid', $roleid)
@@ -333,7 +333,6 @@ class Channel {
         }
 
         // $this->authority->logcat('error', 'Channel::getWorkspace(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
-
         $this->authority->delete($cacheKey);
 
         return array();
@@ -360,7 +359,7 @@ class Channel {
                           ->get('http://ip.taobao.com/service/getIpInfo.php?ip=' . $ip, 'json')
                           ->toArray();
 
-            $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
+            $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip;
 
             if (!empty($result)) {
                 if ($result['code'] == 0) {
@@ -414,7 +413,7 @@ class Channel {
             $result = Curl::getInstance(true)
                           ->get("http://apis.juhe.cn/ip/ipNew?ip=" . $ip . "&key=f242a7b62e202745e0964a877f3657de", 'json')
                           ->toArray();
-            $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip . " ";
+            $remark = Os::getOs('string') . " " . Os::getBrand('string') . Os::getBrowser('string') . " " . $ip;
             if (!empty($result)) {
                 if ($result['resultcode'] == 200) {
                     $remark .= implode('_', $result['result']) . " " . $ip;

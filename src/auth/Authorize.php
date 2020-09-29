@@ -6,7 +6,7 @@ namespace mark\auth;
 
 use think\facade\Session;
 use think\facade\Config;
-use think\facade\Request;
+use mark\auth\sso\Client;
 use Psr\SimpleCache\CacheInterface;
 
 final class Authorize {
@@ -18,6 +18,11 @@ final class Authorize {
     public static $isTesting  = 'isTesting';
     public static $isManager  = 'isManager';
     public static $isOrganize = 'isOrganize';
+
+    public static $host      = 'https://auth.tianfu.ink';
+    public static $_endpoint = 'https://auth.tianfu.ink/auth.php';
+    public static $_type     = "OAuth_PHP_SDK";
+    public static $_version  = "0.0.1";
 
     private function __construct() {
     }
@@ -33,30 +38,20 @@ final class Authorize {
     }
 
     /**
-     * @var \mark\auth\Client
+     * @var \mark\auth\sso\Client
      */
     private static $client;
 
     /**
-     * 权限验证分发器
-     * 1、权限级别｛1登录、2会员、3管理员等｝
+     * 获取请求客户端
      *
-     * @param string $level
-     * @param string $scope
+     * @param bool $complete
      *
-     * @return array|bool|false|mixed|string|\think\response\Redirect
+     * @return \mark\auth\sso\Client
      */
-    public static function dispenser($level = 'slave', $scope = '') {
-        if ($level == 'master') {
-            return redirect(Config('auth.host') . '/auth.php/login/login?callback=' . urlencode(Request::url(true)));
-        }
-
-        return self::getClient(true)->request($scope);
-    }
-
     public static function getClient(bool $complete = false) {
         if (empty(self::$client) || !self::$client instanceof Client || $complete) {
-            self::$client = new Client(Authorize::getInstance());
+            self::$client = new Client();
         }
 
         return self::$client;
@@ -86,6 +81,8 @@ final class Authorize {
      * 已登录为True
      * 未登录为False
      *
+     * @param array $value
+     *
      * @return bool
      */
     public static function isLogin($value = array()) {
@@ -101,6 +98,9 @@ final class Authorize {
      * 验证是否经验联合授权
      *
      * @TODO Union.Status 有待完善，具体有效数据
+     *
+     * @param array $value
+     *
      * @return bool
      */
     public static function isUnion($value = array()) {
@@ -115,6 +115,8 @@ final class Authorize {
 
     /**
      * 校验是否为组织
+     *
+     * @param array $value
      *
      * @return bool
      */
@@ -132,6 +134,8 @@ final class Authorize {
 
     /**
      * 校验是否为门店
+     *
+     * @param array $value
      *
      * @return bool
      */
@@ -172,6 +176,8 @@ final class Authorize {
      * 管理者为True
      * 其它人为False
      *
+     * @param array $value
+     *
      * @return bool
      */
     public static function isManager($value = array()) {
@@ -190,6 +196,8 @@ final class Authorize {
      * 测试员为True
      * 其它人为False
      *
+     * @param array $value
+     *
      * @return bool
      */
     public static function isTesting($value = array()) {
@@ -201,6 +209,8 @@ final class Authorize {
      * 已过期为True
      * 未过期为False
      *
+     * @param array $value
+     *
      * @return bool
      */
     public static function isExpire($value = array()) {
@@ -211,7 +221,7 @@ final class Authorize {
      * 验证是否有权限
      * PermissionID 权限值
      *
-     * @param $permissionid
+     * @param null $permission
      */
     public static function hasPermission($permission = null) {
 

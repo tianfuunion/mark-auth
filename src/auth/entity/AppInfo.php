@@ -7,6 +7,8 @@ namespace mark\auth\entity;
 use think\facade\Config;
 use think\facade\Cache;
 use mark\http\Curl;
+use mark\auth\Authorize;
+use mark\response\Responsive;
 
 final class AppInfo {
 
@@ -18,16 +20,15 @@ final class AppInfo {
         array('id' => 4, 'title' => 'Android App', 'name' => 'AndroidApp'),
     );
 
-    public static function getInfo(string $openid, string $appid, string $poolid, $cache = true): array {
+    public static function getAppInfo(string $openid, string $appid, string $poolid, $cache = true): array {
         if (empty($openid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
         }
         if (empty($appid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的AppID', 'origin');
         }
-
         if (empty($poolid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的PoolID', 'origin');
         }
 
         $cacheKey = 'AuthUnion:appinfo:poolid:' . $poolid . ':appid:' . $appid;
@@ -41,7 +42,7 @@ final class AppInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/app/app_info', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/app/app_info', 'json')
                       ->appendData('openid', $openid)
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
@@ -50,16 +51,16 @@ final class AppInfo {
 
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
-                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
-                 Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+                // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
+                Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             }
 
-            return $result['data'];
+            return $result;
         }
         // $this->authority->logcat('error', 'RoleInfo::getRoleInfo(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
-        return array();
+        return $result;
     }
 
 }

@@ -7,31 +7,37 @@ namespace mark\auth\entity;
 use think\facade\Config;
 use think\facade\Cache;
 use mark\http\Curl;
+use mark\auth\Authorize;
+use mark\response\Responsive;
 
 final class UnionInfo {
 
     /**
      * 获取授权详情
      *
-     * @param        $id
+     * @param string $openid
+     * @param        $unionid
      * @param string $appid
      * @param string $poolid
      * @param bool   $cache
      *
      * @return array
      */
-    public static function find($id, string $appid, string $poolid, $cache = true): array {
-        if (empty($id)) {
-            return array();
+    public static function getUnionInfo(string $openid, $unionid, string $appid, string $poolid, $cache = true): array {
+        if (empty($openid)) {
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
+        }
+        if (empty($unionid)) {
+            return Responsive::display('', 412, '', '无效的联合授权ID', 'origin');
         }
         if (empty($appid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的AppID', 'origin');
         }
         if (empty($poolid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的PoolID', 'origin');
         }
 
-        $cacheKey = 'AuthUnion:unioninfo:appid:' . $appid . ':poolid:' . $poolid . ':id:' . $id;
+        $cacheKey = 'AuthUnion:unioninfo:appid:' . $appid . ':poolid:' . $poolid . ':unionid:' . $unionid;
         if (Cache::has($cacheKey) && $cache) {
             // $result = $this->authority->cache->get($cacheKey);
             $union = Cache::get($cacheKey);
@@ -41,8 +47,9 @@ final class UnionInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_find', 'json')
-                      ->appendData('id', $id)
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/union/union_info', 'json')
+                      ->appendData('openid', $openid)
+                      ->appendData('unionid', $unionid)
                       ->appendData('poolid', $poolid)
                       ->appendData('appid', $appid)
                       ->appendData('cache', $cache)
@@ -54,30 +61,33 @@ final class UnionInfo {
                 // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             }
 
-            return $result['data'];
+            return $result;
         }
         // $this->authority->logcat('error', 'RoleInfo::find(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
-        return array();
+        return $result;
     }
 
     /**
      * 获取授权列表
      *
+     * @param string $openid
      * @param string $appid
      * @param string $poolid
      * @param bool   $cache
      *
      * @return array
      */
-    public static function select(string $appid, string $poolid, $cache = true): array {
-        if (empty($appid)) {
-            return array();
+    public static function getUnionList(string $openid, string $appid, string $poolid, $cache = true): array {
+        if (empty($openid)) {
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
         }
-
+        if (empty($appid)) {
+            return Responsive::display('', 412, '', '无效的AppID', 'origin');
+        }
         if (empty($poolid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的PoolID', 'origin');
         }
 
         $cacheKey = 'AuthUnion:unionlist:appid:' . $appid . ':poolid:' . $poolid;
@@ -91,7 +101,8 @@ final class UnionInfo {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_select', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/union/union_select', 'json')
+                      ->appendData('openid', $openid)
                       ->appendData('appid', $appid)
                       ->appendData('poolid', $poolid)
                       ->appendData('cache', $cache)
@@ -100,139 +111,130 @@ final class UnionInfo {
         if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
             if ($cache) {
                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
-                // Cache::set($cacheKey, $result['data'], Config::get('session.expire', 1440));
+                // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             }
 
-            return $result['data'];
+            return $result;
         }
         // $this->authority->logcat('error', 'union::getunionList(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
         Cache::delete($cacheKey);
 
-        return array();
+        return $result;
     }
 
     /**
      * 添加授权信息
      *
-     * @param array  $union
      * @param string $openid
+     * @param array  $union
      * @param string $appid
      * @param string $poolid
      *
-     * @return int
+     * @return array
      */
-    public static function insert(array $union, string $openid, string $appid, string $poolid): int {
-        if (empty($union)) {
-            return 0;
-        }
+    public static function createUnion(string $openid, array $union, string $appid, string $poolid): array {
         if (empty($openid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
+        }
+        if (empty($union)) {
+            return Responsive::display('', 412, '', '无效的授权信息', 'origin');
         }
         if (empty($appid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的AppID', 'origin');
         }
         if (empty($poolid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的PoolID', 'origin');
         }
 
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_insert', 'json')
-                      ->appendData('union', $union)
+                      ->post(Config::get('auth.host', Authorize::$host) . '/api.php/union/union_create')
                       ->appendData('openid', $openid)
-                      ->appendData('poolid', $poolid)
+                      ->appendData('union', $union)
                       ->appendData('appid', $appid)
+                      ->appendData('poolid', $poolid)
                       ->toArray();
-
-        if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
-
-            return $result['data'];
-        }
 
         // $this->authority->logcat('error', 'UnionInfo::insert(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-        return 0;
+        return $result;
     }
 
     /**
      * 更新授权信息
      *
-     * @param        $id
      * @param string $openid
+     * @param        $unionid
+     * @param array  $union
      * @param string $appid
      * @param string $poolid
      *
-     * @return int
+     * @return array
      */
-    public static function update($id, string $openid, string $appid, string $poolid): int {
-        if (empty($id)) {
-            return 0;
-        }
+    public static function updateUnion(string $openid, $unionid, array $union, string $appid, string $poolid): array {
         if (empty($openid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
+        }
+        if (empty($unionid)) {
+            return Responsive::display('', 412, '', '无效的联合授权ID', 'origin');
+        }
+        if (empty($union)) {
+            return Responsive::display('', 412, '', '无效的授权信息', 'origin');
         }
         if (empty($appid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的AppID', 'origin');
         }
         if (empty($poolid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的PoolID', 'origin');
         }
 
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_update', 'json')
-                      ->appendData('id', $id)
+                      ->post(Config::get('auth.host', Authorize::$host) . '/api.php/union/union_update')
                       ->appendData('openid', $openid)
+                      ->appendData('unionid', $unionid)
+                      ->appendData('union', $union)
                       ->appendData('poolid', $poolid)
                       ->appendData('appid', $appid)
                       ->toArray();
 
-        if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
-
-            return $result['data'];
-        }
-
         // $this->authority->logcat('error', 'UnionInfo::update(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
 
-        return 0;
+        return $result;
     }
 
     /**
      * 删除授权信息
      *
-     * @param        $id
      * @param string $openid
+     * @param        $unionid
      * @param string $appid
      * @param string $poolid
      *
-     * @return int
+     * @return array
      */
-    public static function delete($id, string $openid, string $appid, string $poolid): int {
-        if (empty($id)) {
-            return 0;
-        }
+    public static function deleteUnion(string $openid, $unionid, string $appid, string $poolid): array {
         if (empty($openid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
+        }
+        if (empty($unionid)) {
+            return Responsive::display('', 412, '', '无效的联合授权ID', 'origin');
         }
         if (empty($appid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的AppID', 'origin');
         }
         if (empty($poolid)) {
-            return 0;
+            return Responsive::display('', 412, '', '无效的PoolID', 'origin');
         }
-
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/union/union_delete', 'json')
-                      ->appendData('id', $id)
+                      ->post(Config::get('auth.host', Authorize::$host) . '/api.php/union/union_delete')
+                      ->appendData('unionid', $unionid)
                       ->appendData('openid', $openid)
                       ->appendData('poolid', $poolid)
                       ->appendData('appid', $appid)
                       ->toArray();
 
-        if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
-            return $result['data'];
-        }
-
         // $this->authority->logcat('error', 'UnionInfo::delete(Data Not Found Exception)' . $cacheKey . ' ' . json_encode($result, JSON_UNESCAPED_UNICODE));
-        return 0;
+
+        return $result;
     }
 
 }

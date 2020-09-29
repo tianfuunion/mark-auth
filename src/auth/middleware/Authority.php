@@ -60,10 +60,25 @@ abstract class Authority implements CacheInterface {
      */
     private $config;
 
+    /**
+     * @var string
+     */
+    protected $host = '';
+
     public function __construct() {
         $this->logcat('info', 'Authority::construct(' . Os::getAgent() . ')');
         Authorize::setCache($this);
         $this->channel = new Channel($this);
+        $this->host = Authorize::$host;
+    }
+
+    /**
+     * 设置后端通信地址
+     *
+     * @param $host string
+     */
+    public function setHost($host) {
+        $this->host = $host;
     }
 
     /**
@@ -308,7 +323,9 @@ abstract class Authority implements CacheInterface {
             /**
              * @todo 9、校验授权信息
              */
-            $access = $this->channel->getAccess($this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug);
+            $access = $this->channel->getAccess(
+                $this->appid, $this->poolid, $channel['channelid'] ?? 404, $this->session->get('union.roleid', 404), $this->debug
+            );
 
             if (Authorize::isAdmin() || Authorize::isTesting()) {
                 $this->logcat('debug', 'Authority::handler(Super Manager has Method[' . Request::method() . '] privileges)');
@@ -455,7 +472,9 @@ abstract class Authority implements CacheInterface {
     protected abstract function has_channel(string $identifier): bool;
 
     /**
-     *验证角色
+     * 验证角色
+     *
+     * @param array $role
      *
      * @return bool
      */
@@ -464,12 +483,16 @@ abstract class Authority implements CacheInterface {
     /**
      * 验证联合授权
      *
+     * @param array $union
+     *
      * @return bool
      */
     protected abstract function has_union(array $union): bool;
 
     /**
      * 验证权限
+     *
+     * @param array $permission
      *
      * @return bool
      */

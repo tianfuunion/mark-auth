@@ -8,6 +8,8 @@ use think\facade\Cache;
 use think\facade\Config;
 
 use mark\http\Curl;
+use mark\auth\Authorize;
+use mark\response\Responsive;
 
 final class Organize {
 
@@ -21,11 +23,11 @@ final class Organize {
      * @return array
      */
     public static function getOrganizeInfo(string $openid, $orgid, $cache = true): array {
-        if (empty($orgid)) {
-            return array();
-        }
         if (empty($openid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
+        }
+        if (empty($orgid)) {
+            return Responsive::display('', 412, '', '无效的组织ID', 'origin');
         }
 
         $cacheKey = 'AuthUnion:organize:info:orgid:' . $orgid;
@@ -38,7 +40,7 @@ final class Organize {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/organize/organize_info', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/organize/organize_info', 'json')
                       ->appendData('orgid', $orgid)
                       ->appendData('openid', $openid)
                       ->appendData('cache', $cache)
@@ -49,6 +51,8 @@ final class Organize {
                 // $this->authority->$cache->set($cacheKey, $result, Config::get('session.expire', 1440));
                 // Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
             }
+
+            return $result;
         }
 
         return $result;
@@ -58,16 +62,14 @@ final class Organize {
      * 列表组织架构
      *
      * @param string $openid
+     * @param string $orgid
      * @param bool   $cache
      *
      * @return array
      */
-    public static function getOrganizeList(string $openid, string $orgid, $cache = true): array {
+    public static function getOrganizeList(string $openid, string $orgid = '', $cache = true): array {
         if (empty($openid)) {
-            return array();
-        }
-        if (empty($orgid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
         }
 
         $cacheKey = 'AuthUnion:organize:listview:orgid:' . $orgid;
@@ -81,11 +83,18 @@ final class Organize {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/organize/organize_list', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/organize/organize_list', 'json')
                       ->appendData('openid', $openid)
                       ->appendData('orgid', $orgid)
                       ->appendData('cache', $cache)
                       ->toArray();
+        if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
+            if ($cache) {
+                Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+            }
+
+            return $result;
+        }
 
         return $result;
     }
@@ -101,10 +110,10 @@ final class Organize {
      */
     public static function getOrganizeTree(string $openid, string $orgid, $cache = true): array {
         if (empty($openid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
         }
         if (empty($orgid)) {
-            return array();
+            return Responsive::display('', 412, '', '无效的组织ID', 'origin');
         }
 
         $cacheKey = 'AuthUnion:organize:treeview:orgid:' . $orgid;
@@ -118,16 +127,21 @@ final class Organize {
         }
 
         $result = Curl::getInstance(true)
-                      ->get(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/organize/organize_tree', 'json')
+                      ->get(Config::get('auth.host', Authorize::$host) . '/api.php/organize/organize_tree', 'json')
                       ->appendData('openid', $openid)
                       ->appendData('orgid', $orgid)
                       ->appendData('cache', $cache)
                       ->toArray();
-        if (!empty($result)) {
+
+        if (!empty($result) && !empty($result['code']) && $result['code'] == 200 && !empty($result['data'])) {
+            if ($cache) {
+                Cache::set($cacheKey, $result, Config::get('session.expire', 1440));
+            }
+
             return $result;
         }
 
-        return array();
+        return $result;
     }
 
     /**
@@ -140,14 +154,13 @@ final class Organize {
      */
     public static function createOrganize(string $openid, array $organize): array {
         if (empty($openid)) {
-            return array('data' => '', 'code' => 401, 'status' => '', 'msg' => '无效的OpenID');
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
         }
         if (empty($organize)) {
-            return array('data' => '', 'code' => 412, 'status' => '', 'msg' => '请输入组织名称');
+            return array('data' => '', 'code' => 412, 'status' => '', 'msg' => '无效的组织信息');
         }
-
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/organize/organize_create', 'json')
+                      ->post(Config::get('auth.host', Authorize::$host) . '/api.php/organize/organize_create')
                       ->appendData('openid', $openid)
                       ->appendData('organize', $organize)
                       ->toArray();
@@ -166,18 +179,17 @@ final class Organize {
      * @return array
      */
     public static function updateOrganize(string $openid, $orgid, array $organize): array {
+        if (empty($openid)) {
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
+        }
         if (empty($orgid)) {
-            return array('data' => '', 'code' => 412, 'status' => '', 'msg' => '无效的组织ID');
+            return Responsive::display('', 412, '', '无效的组织ID', 'origin');
         }
         if (empty($organize)) {
-            return array('data' => '', 'code' => 412, 'status' => '', 'msg' => '无效的组织名称');
+            return array('data' => '', 'code' => 412, 'status' => '', 'msg' => '无效的组织信息');
         }
-        if (empty($openid)) {
-            return array('data' => '', 'code' => 401, 'status' => '', 'msg' => '无效的OpenID');
-        }
-
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/organize/organize_update', 'json')
+                      ->post(Config::get('auth.host', Authorize::$host) . '/api.php/organize/organize_update')
                       ->appendData('openid', $openid)
                       ->appendData('orgid', $orgid)
                       ->appendData('organize', $organize)
@@ -189,24 +201,22 @@ final class Organize {
     /**
      * 删除组织节点
      *
-     * @note 如果该节点存在子节点，则无法删除
-     *
      * @param string $openid
      * @param        $orgid
      *
      * @return array
+     * @todo 如果该节点存在子节点，则无法删除
+     *
      */
     public static function deleteOrganize(string $openid, $orgid): array {
-        if (empty($orgid)) {
-            return array('data' => '', 'code' => 412, 'status' => '', 'msg' => '无效的组织ID');
-        }
-
         if (empty($openid)) {
-            return array('data' => '', 'code' => 401, 'status' => '', 'msg' => '无效的OpenID');
+            return Responsive::display('', 412, '', '无效的授权ID', 'origin');
         }
-
+        if (empty($orgid)) {
+            return Responsive::display('', 412, '', '无效的组织ID', 'origin');
+        }
         $result = Curl::getInstance(true)
-                      ->post(Config::get('auth.host', 'https://auth.tianfu.ink') . '/api.php/organize/organize_delete', 'json')
+                      ->post(Config::get('auth.host', Authorize::$host) . '/api.php/organize/organize_delete')
                       ->appendData('openid', $openid)
                       ->appendData('orgid', $orgid)
                       ->toArray();
